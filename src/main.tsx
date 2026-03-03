@@ -1,10 +1,11 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+// src/main.tsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import Router from "./Router";
+import "./index.css"; // Make sure this points to your CSS file with the Tailwind theme!
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <Router />
+  </React.StrictMode>,
+);
