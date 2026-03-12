@@ -27,7 +27,6 @@ import Time from "./assets/icons/gray/time.svg";
 import Undo from "./assets/icons/gray/undo.svg";
 import Zoom from "./assets/icons/gray/zoom.svg";
 
-const PRELOAD_WINDOW = 2;
 const SERVER_URL = "http://127.0.0.1:8000"; // FastAPI server address
 
 export default function PatientViewer() {
@@ -43,24 +42,18 @@ export default function PatientViewer() {
 
   // === IMAGE SEQUENCE STATE ===
   const [currentFrame, setCurrentFrame] = useState(1);
-  const preloadedFrames = useRef<Set<string>>(new Set());
   const scrollAccumulator = useRef(0);
   const imageContainerRef = useRef<HTMLDivElement>(null);
+
+  // === FRONTEND CACHING STATE ===
+  const imageBlobCache = useRef<Map<string, string>>(new Map());
+  const [activeImageSrc, setActiveImageSrc] = useState<string>("");
 
   // === BOTTOM SHEET DRAG STATE ===
   const [sheetHeight, setSheetHeight] = useState(96);
   const [isDragging, setIsDragging] = useState(false);
 
   const patientModules = import.meta.glob("./constant/*.tsx");
-
-  // Dynamic Image URL Generator
-  const getActiveImageUrl = (frameIdx: number, currentAxis: string) => {
-    if (!sessionId || !serverMeta) return "";
-    const seqCode = serverMeta.sequences[0]; // Usually SEQ001
-    // API is 0-indexed, UI is 1-indexed
-    const sliceIdx = Math.max(0, frameIdx - 1);
-    return `${SERVER_URL}/view/${sessionId}/${seqCode}/${currentAxis}/${sliceIdx}`;
-  };
 
   // Fetch Patient Demographics & Open Server Session
   useEffect(() => {
@@ -98,7 +91,7 @@ export default function PatientViewer() {
           const shape = data.analyses[data.sequences[0]].shape;
           const initialMax = shape[2]; // Axial is index 2
           setMaxFrames(initialMax);
-          setCurrentFrame(Math.floor(initialMax / 2)); // Start in the middle of the brain
+          setCurrentFrame(0);
         }
       } catch (err) {
         console.error("Server connection error:", err);
@@ -122,27 +115,107 @@ export default function PatientViewer() {
       if (axis === "sagittal") newMax = shape[0];
 
       setMaxFrames(newMax);
-      setCurrentFrame(Math.floor(newMax / 2)); // Reset to middle slice when switching view
-      preloadedFrames.current.clear(); // Clear cache for new axis
+      setCurrentFrame(0); // Reset to middle slice when switching view
     }
   }, [axis, serverMeta]);
 
-  // === SMART IMAGE PRELOADER ===
+  // Add this tracking reference right below your other useRefs at the top of the component
+  const fetchingSet = useRef<Set<string>>(new Set());
+
+  // === FETCH AND CACHE ACTIVE IMAGE ===
   useEffect(() => {
-    if (!sessionId) return;
+    const fetchImageToCache = async () => {
+      if (!sessionId || !serverMeta) return;
 
-    const minFrame = Math.max(1, currentFrame - PRELOAD_WINDOW);
-    const maxFrame = Math.min(maxFrames, currentFrame + PRELOAD_WINDOW);
+      const cacheKey = `${axis}-${currentFrame}`;
 
-    for (let i = minFrame; i <= maxFrame; i++) {
-      const cacheKey = `${axis}-${i}`;
-      if (!preloadedFrames.current.has(cacheKey)) {
-        const img = new Image();
-        img.src = getActiveImageUrl(i, axis);
-        preloadedFrames.current.add(cacheKey);
+      // 1. If we already have it in RAM, use it immediately!
+      if (imageBlobCache.current.has(cacheKey)) {
+        setActiveImageSrc(imageBlobCache.current.get(cacheKey)!);
+        return;
       }
-    }
-  }, [currentFrame, sessionId, axis, maxFrames]);
+
+      // 2. Mark this exact frame as "currently fetching"
+      fetchingSet.current.add(cacheKey);
+
+      const seqCode = serverMeta.sequences[0];
+      const sliceIdx = Math.max(0, currentFrame - 1);
+      const url = `${SERVER_URL}/view/${sessionId}/${seqCode}/${axis}/${sliceIdx}`;
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Failed to fetch slice");
+        const blob = await response.blob();
+
+        const localUrl = URL.createObjectURL(blob);
+        imageBlobCache.current.set(cacheKey, localUrl);
+        setActiveImageSrc(localUrl); // Update the UI
+      } catch (error) {
+        console.error("Image fetch error:", error);
+      } finally {
+        fetchingSet.current.delete(cacheKey); // Release the lock
+      }
+    };
+
+    fetchImageToCache();
+  }, [currentFrame, axis, sessionId, serverMeta]);
+
+  // === SMART OUTWARD BACKGROUND LOADER ===
+  useEffect(() => {
+    if (!sessionId || !serverMeta) return;
+
+    let isCancelled = false;
+
+    const prefetchOutward = async () => {
+      // 1. Create an array of all possible frames [1, 2, 3... maxFrames]
+      const allFrames = Array.from({ length: maxFrames }, (_, i) => i + 1);
+
+      // 2. Sort them by distance to the current frame!
+      // If you are at 75, it sorts like: [75, 76, 74, 77, 73...]
+      allFrames.sort(
+        (a, b) => Math.abs(a - currentFrame) - Math.abs(b - currentFrame),
+      );
+
+      for (const i of allFrames) {
+        if (isCancelled) break;
+
+        const cacheKey = `${axis}-${i}`;
+
+        // 3. Only fetch if we don't have it AND the active fetcher isn't already grabbing it
+        if (
+          !imageBlobCache.current.has(cacheKey) &&
+          !fetchingSet.current.has(cacheKey)
+        ) {
+          fetchingSet.current.add(cacheKey);
+
+          const seqCode = serverMeta.sequences[0];
+          const sliceIdx = Math.max(0, i - 1);
+          const url = `${SERVER_URL}/view/${sessionId}/${seqCode}/${axis}/${sliceIdx}`;
+
+          try {
+            const response = await fetch(url);
+            if (response.ok) {
+              const blob = await response.blob();
+              imageBlobCache.current.set(cacheKey, URL.createObjectURL(blob));
+            }
+          } catch (error) {
+            // Silently ignore prefetch errors
+          } finally {
+            fetchingSet.current.delete(cacheKey);
+          }
+
+          // A tiny breather so the main thread stays buttery smooth
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+      }
+    };
+
+    prefetchOutward();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [sessionId, axis, maxFrames, serverMeta, currentFrame]); // Notice currentFrame is now a dependency!
 
   // === NON-PASSIVE WHEEL SCROLL HANDLER ===
   useEffect(() => {
@@ -167,7 +240,7 @@ export default function PatientViewer() {
     return () => {
       container.removeEventListener("wheel", handleNativeWheel);
     };
-  }, [maxFrames]); // Dependency updated to maxFrames
+  }, [maxFrames]);
 
   // === BOTTOM SHEET DRAG HANDLER ===
   useEffect(() => {
@@ -424,9 +497,9 @@ export default function PatientViewer() {
               className="flex-1 flex items-center justify-center sm:p-8 px-8 pb-8 pt-16 overflow-hidden relative cursor-ns-resize min-h-0"
             >
               <img
-                src={getActiveImageUrl(currentFrame, axis)}
+                src={activeImageSrc} // We now use the React state!
                 alt={`Brain Scan Slice ${currentFrame}`}
-                className="sm:w-3/4 sm:h-3/4 sm:object-contain select-none"
+                className="select-none sm:w-3/4 sm:h-3/4 sm:object-contain"
                 draggable="false"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
