@@ -1,0 +1,15 @@
+{
+  "analysis": {
+    "lvl1": {
+      "clasification": {
+        "tumor": 0.94,
+        "stroke": 0.02,
+        "normal": 0.04
+      },
+      "important_slice": [76, 218]
+    },
+    "lvl2": {},
+    "lvl3": {}
+  },
+  "doctor_notes": "Hello World"
+}

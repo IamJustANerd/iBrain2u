@@ -53,7 +53,7 @@ export default function PatientViewer() {
           />
         </div>
 
-        <AiAnalysisPanel patient={patient} />
+        <AiAnalysisPanel patient={patient} setCurrentFrame={setCurrentFrame} />
       </div>
     </div>
   );

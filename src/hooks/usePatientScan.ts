@@ -57,7 +57,7 @@ export function usePatientScan(
         if (data.sequences && data.sequences.length > 0) {
           const shape = data.analyses[data.sequences[0]].shape;
           setMaxFrames(shape[2]);
-          setCurrentFrame(0);
+          setCurrentFrame(Math.floor(shape[2] / 2));
         }
       } catch (err) {
         console.error("Server connection error:", err);
@@ -80,7 +80,7 @@ export function usePatientScan(
       if (axis === "sagittal") newMax = shape[0];
 
       setMaxFrames(newMax);
-      setCurrentFrame(0);
+      setCurrentFrame(Math.floor(newMax / 2));
     }
   }, [axis, serverMeta]);
 
