@@ -7,6 +7,9 @@ import SidebarLeft from "./components/SidebarLeft";
 import MainViewerArea from "./components/MainViewerArea";
 import AiAnalysisPanel from "./components/AIAnalysisPanel";
 
+// dummy data
+import mockData from "./constant/mockServerData.json";
+
 // 1. Vite glob evaluates correctly because it's relative to THIS file
 const patientModules = import.meta.glob("./constant/*.tsx");
 
@@ -50,6 +53,8 @@ export default function PatientViewer() {
             maxFrames={maxFrames}
             activeImageSrc={activeImageSrc}
             patient={patient}
+            // NEW: Pass the analysis object from your mock JSON
+            analysisData={mockData.analysis} 
           />
         </div>
 

@@ -1,5 +1,5 @@
 // src/components/MainViewerArea.tsx
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 
 // Imports for all your tool icons
 import ArrowRight from "../assets/icons/gray/arrowRight.svg";
@@ -26,6 +26,8 @@ interface MainViewerAreaProps {
   activeImageSrc: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   patient: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  analysisData?: any; 
 }
 
 export default function MainViewerArea({
@@ -36,12 +38,43 @@ export default function MainViewerArea({
   maxFrames,
   activeImageSrc,
   patient,
+  analysisData,
 }: MainViewerAreaProps) {
   const scrollAccumulator = useRef(0);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
-  // Extract important slices safely from the patient data
-  const importantSlices = patient?.analysis?.lvl1?.important_slice || [];
+  // Group important slices by their frame number to handle overlaps
+  const markersBySlice = useMemo(() => {
+    // Structure: { [sliceIndex: number]: string[] } -> { 65: ['lvl1', 'lvl2'] }
+    const map: Record<number, string[]> = {};
+    
+    if (analysisData) {
+      Object.keys(analysisData).forEach((levelKey) => {
+        const levelInfo = analysisData[levelKey];
+        if (levelInfo && Array.isArray(levelInfo.important_slice)) {
+          levelInfo.important_slice.forEach((slice: number) => {
+            if (!map[slice]) map[slice] = [];
+            // Prevent duplicate levels on the same slice
+            if (!map[slice].includes(levelKey)) {
+              map[slice].push(levelKey);
+            }
+          });
+        }
+      });
+    }
+
+    // Ensure they are sorted so lvl1 is top, lvl2 middle, lvl3 bottom
+    Object.values(map).forEach(levels => levels.sort());
+    return map;
+  }, [analysisData]);
+
+  // Check if current frame is marked in our map
+  const isCurrentFrameImportant = !!markersBySlice[currentFrame];
+
+  // Dynamically assign Tailwind classes based on whether the current frame is an anomaly
+  const thumbClasses = isCurrentFrameImportant
+    ? "opacity-100 [&::-webkit-slider-thumb]:bg-red-1 [&::-moz-range-thumb]:bg-red-1"
+    : "opacity-50 [&::-webkit-slider-thumb]:bg-black [&::-moz-range-thumb]:bg-black";
 
   // Non-passive wheel scroll handler restricted to just the canvas
   useEffect(() => {
@@ -183,24 +216,11 @@ export default function MainViewerArea({
         )}
       </div>
 
-      {/* NEW: Custom Range Slider with Anomaly Markers */}
-      <div className="absolute bottom-28 md:bottom-20 left-10 right-10 z-20">
+      {/* Custom Range Slider with Anomaly Markers */}
+      <div className="absolute bottom-28 md:bottom-20 left-20 right-20 z-20">
         <div className="relative flex items-center w-full h-6">
           {/* Base Track */}
-          <div className="absolute left-0 right-0 h-1 bg-gray-6 rounded pointer-events-none"></div>
-
-          {/* Anomaly Markers (Red Lines) */}
-          {importantSlices.map((sliceIndex: number) => {
-            // Calculate percentage to position the red marker correctly along the track
-            const positionPercent = maxFrames > 1 ? ((sliceIndex - 1) / (maxFrames - 1)) * 100 : 0;
-            return (
-              <div
-                key={sliceIndex}
-                className="absolute h-3 w-[2px] bg-red-600 top-1/2 -translate-y-1/2 pointer-events-none z-10"
-                style={{ left: `${positionPercent}%` }}
-              />
-            );
-          })}
+          <div className="absolute left-0 right-0 h-3 bg-gray-3 rounded-xl pointer-events-none"></div>
 
           {/* Interactive Range Input */}
           <input
@@ -209,11 +229,35 @@ export default function MainViewerArea({
             max={maxFrames}
             value={currentFrame}
             onChange={(e) => setCurrentFrame(Number(e.target.value))}
-            className="absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer z-20 
-                       focus:outline-none
-                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-gray-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow
-                       [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-gray-4 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full"
+            className={`absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer z-20 transition-opacity duration-200 focus:outline-none ${thumbClasses} [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:transition-colors [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:transition-colors`}
           />
+
+          {/* Anomaly Markers */}
+          {Object.entries(markersBySlice).map(([sliceStr, levels]) => {
+            const sliceIndex = Number(sliceStr);
+            const positionPercent = maxFrames > 1 ? ((sliceIndex - 1) / (maxFrames - 1)) * 100 : 0;
+            
+            return (
+              <div
+                key={sliceIndex}
+                // Wrapper uses flex-col to automatically divide height among children 
+                className="absolute h-3 w-[2px] top-1/2 -translate-y-1/2 flex flex-col pointer-events-none z-10 overflow-hidden"
+                style={{ left: `${positionPercent}%` }}
+              >
+                {levels.map((lvl) => {
+                  // Determine background based on level
+                  let bgClass = "bg-gray-1"; 
+                  if (lvl === "lvl1") bgClass = "bg-red-1";
+                  if (lvl === "lvl2") bgClass = "bg-yellow-1";
+                  if (lvl === "lvl3") bgClass = "bg-purple-1";
+
+                  // flex-1 ensures the height is perfectly distributed (h-1.5 for 2 items, h-1 for 3 items)
+                  return <div key={lvl} className={`w-full flex-1 ${bgClass}`} />;
+                })}
+              </div>
+            );
+          })}
+
         </div>
       </div>
 
