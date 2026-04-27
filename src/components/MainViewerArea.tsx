@@ -72,8 +72,9 @@ export default function MainViewerArea({
   const isCurrentFrameImportant = !!markersBySlice[currentFrame];
 
   // Dynamically assign Tailwind classes based on whether the current frame is an anomaly
+  // Uses blue-1 with 50% opacity when active, black with 50% opacity when inactive
   const thumbClasses = isCurrentFrameImportant
-    ? "opacity-100 [&::-webkit-slider-thumb]:bg-red-1 [&::-moz-range-thumb]:bg-red-1"
+    ? "opacity-50 [&::-webkit-slider-thumb]:bg-blue-1 [&::-moz-range-thumb]:bg-blue-1"
     : "opacity-50 [&::-webkit-slider-thumb]:bg-black [&::-moz-range-thumb]:bg-black";
 
   // Non-passive wheel scroll handler restricted to just the canvas
@@ -219,10 +220,10 @@ export default function MainViewerArea({
       {/* Custom Range Slider with Anomaly Markers */}
       <div className="absolute bottom-28 md:bottom-20 left-20 right-20 z-20">
         <div className="relative flex items-center w-full h-6">
-          {/* Base Track */}
+          {/* Base Track restored to simple rounded-xl */}
           <div className="absolute left-0 right-0 h-3 bg-gray-3 rounded-xl pointer-events-none"></div>
 
-          {/* Interactive Range Input */}
+          {/* Interactive Range Input - updated thumb to w-4 h-4 for clean rounded math */}
           <input
             type="range"
             min={1}
@@ -237,21 +238,25 @@ export default function MainViewerArea({
             const sliceIndex = Number(sliceStr);
             const positionPercent = maxFrames > 1 ? ((sliceIndex - 1) / (maxFrames - 1)) * 100 : 0;
             
+            // THE FIX: Calculate thumb offset to match native range slider behavior.
+            // A w-4 Tailwind class is 16px. Half of that is 8px.
+            const thumbWidth = 16;
+            const offset = (thumbWidth / 2) - (positionPercent / 100) * thumbWidth;
+            
             return (
               <div
                 key={sliceIndex}
-                // Wrapper uses flex-col to automatically divide height among children 
-                className="absolute h-3 w-[2px] top-1/2 -translate-y-1/2 flex flex-col pointer-events-none z-10 overflow-hidden"
-                style={{ left: `${positionPercent}%` }}
+                // Added -translate-x-1/2 so the center of the marker is exactly on the coordinate
+                className="absolute h-3 w-[2px] top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col pointer-events-none z-10 overflow-hidden"
+                // Apply the calculated offset
+                style={{ left: `calc(${positionPercent}% + ${offset}px)` }}
               >
                 {levels.map((lvl) => {
-                  // Determine background based on level
                   let bgClass = "bg-gray-1"; 
                   if (lvl === "lvl1") bgClass = "bg-red-1";
                   if (lvl === "lvl2") bgClass = "bg-yellow-1";
                   if (lvl === "lvl3") bgClass = "bg-purple-1";
 
-                  // flex-1 ensures the height is perfectly distributed (h-1.5 for 2 items, h-1 for 3 items)
                   return <div key={lvl} className={`w-full flex-1 ${bgClass}`} />;
                 })}
               </div>
