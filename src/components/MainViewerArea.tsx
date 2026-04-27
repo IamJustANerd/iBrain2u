@@ -16,6 +16,7 @@ import Refresh from "../assets/icons/gray/refresh.svg";
 import Ruler from "../assets/icons/gray/ruler.svg";
 import Undo from "../assets/icons/gray/undo.svg";
 import Zoom from "../assets/icons/gray/zoom.svg";
+import Comment from "../assets/icons/comment.svg";
 
 interface MainViewerAreaProps {
   axis: "axial" | "sagittal" | "coronal";
@@ -72,10 +73,9 @@ export default function MainViewerArea({
   const isCurrentFrameImportant = !!markersBySlice[currentFrame];
 
   // Dynamically assign Tailwind classes based on whether the current frame is an anomaly
-  // Uses blue-1 with 50% opacity when active, black with 50% opacity when inactive
   const thumbClasses = isCurrentFrameImportant
     ? "opacity-50 [&::-webkit-slider-thumb]:bg-blue-1 [&::-moz-range-thumb]:bg-blue-1"
-    : "opacity-50 [&::-webkit-slider-thumb]:bg-black [&::-moz-range-thumb]:bg-black";
+    : "opacity-50 [&::-webkit-slider-thumb]:bg-gray-1 [&::-moz-range-thumb]:bg-gray-1";
 
   // Non-passive wheel scroll handler restricted to just the canvas
   useEffect(() => {
@@ -99,6 +99,11 @@ export default function MainViewerArea({
     container.addEventListener("wheel", handleNativeWheel, { passive: false });
     return () => container.removeEventListener("wheel", handleNativeWheel);
   }, [maxFrames, setCurrentFrame]);
+
+  // Calculate the current thumb's position for the Dialogue Box
+  const currentPositionPercent = maxFrames > 1 ? ((currentFrame - 1) / (maxFrames - 1)) * 100 : 0;
+  const thumbWidth = 24; // Updated to match w-6 (24px)
+  const currentOffset = (thumbWidth / 2) - (currentPositionPercent / 100) * thumbWidth;
 
   return (
     <main className="flex-1 flex flex-col relative bg-gray-11 min-h-0 min-w-0">
@@ -218,19 +223,36 @@ export default function MainViewerArea({
       </div>
 
       {/* Custom Range Slider with Anomaly Markers */}
-      <div className="absolute bottom-28 md:bottom-20 left-20 right-20 z-20">
+      <div className="absolute bottom-28 md:bottom-20 left-60 right-60 z-20">
         <div className="relative flex items-center w-full h-6">
-          {/* Base Track restored to simple rounded-xl */}
+          
+          {/* UPDATED: Dialog Box (Comment Tooltip) positioned to the Bottom Right */}
+          <div 
+            className="absolute top-full flex justify-center items-center pointer-events-none z-30"
+            style={{ 
+              left: `calc(${currentPositionPercent}% + ${currentOffset}px)`, 
+              transform: 'translateX(-10px)' 
+            }}
+          >
+            <div className="relative flex justify-center items-center">
+              <img src={Comment} alt="Comment Box" className="h-7 w-auto object-contain" />
+              <span className="absolute text-[9px] font-semibold text-white mt-1.5 whitespace-nowrap px-2">
+                Slice {currentFrame}
+              </span>
+            </div>
+          </div>
+
+          {/* Base Track */}
           <div className="absolute left-0 right-0 h-3 bg-gray-3 rounded-xl pointer-events-none"></div>
 
-          {/* Interactive Range Input - updated thumb to w-4 h-4 for clean rounded math */}
+          {/* Interactive Range Input */}
           <input
             type="range"
             min={1}
             max={maxFrames}
             value={currentFrame}
             onChange={(e) => setCurrentFrame(Number(e.target.value))}
-            className={`absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer z-20 transition-opacity duration-200 focus:outline-none ${thumbClasses} [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:transition-colors [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:transition-colors`}
+            className={`absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer z-20 transition-opacity duration-200 focus:outline-none ${thumbClasses} [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:transition-colors [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:transition-colors`}
           />
 
           {/* Anomaly Markers */}
@@ -238,17 +260,13 @@ export default function MainViewerArea({
             const sliceIndex = Number(sliceStr);
             const positionPercent = maxFrames > 1 ? ((sliceIndex - 1) / (maxFrames - 1)) * 100 : 0;
             
-            // THE FIX: Calculate thumb offset to match native range slider behavior.
-            // A w-4 Tailwind class is 16px. Half of that is 8px.
-            const thumbWidth = 16;
+            // Fixed width to match w-6 (24px)
             const offset = (thumbWidth / 2) - (positionPercent / 100) * thumbWidth;
             
             return (
               <div
                 key={sliceIndex}
-                // Added -translate-x-1/2 so the center of the marker is exactly on the coordinate
                 className="absolute h-3 w-[2px] top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col pointer-events-none z-10 overflow-hidden"
-                // Apply the calculated offset
                 style={{ left: `calc(${positionPercent}% + ${offset}px)` }}
               >
                 {levels.map((lvl) => {
