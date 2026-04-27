@@ -40,6 +40,9 @@ export default function MainViewerArea({
   const scrollAccumulator = useRef(0);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
+  // Extract important slices safely from the patient data
+  const importantSlices = patient?.analysis?.lvl1?.important_slice || [];
+
   // Non-passive wheel scroll handler restricted to just the canvas
   useEffect(() => {
     const container = imageContainerRef.current;
@@ -69,11 +72,7 @@ export default function MainViewerArea({
       <div className="h-8 sm:h-12 border-b-0 border-gray-6 bg-gray-7 flex items-center justify-between px-4 overflow-x-auto">
         <div className="flex items-center gap-4 text-gray-1 shrink-0">
           <button className="p-1 bg-gray-4 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0">
-            <img
-              src={Mouse}
-              className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-              alt="Mouse"
-            />
+            <img src={Mouse} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Mouse" />
           </button>
           <button className="p-1 shrink-0">
             <img src={Move} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Move" />
@@ -82,30 +81,14 @@ export default function MainViewerArea({
             <img src={Zoom} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Zoom" />
           </button>
           <button className="p-1 shrink-0">
-            <img
-              src={Layer}
-              className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-              alt="Layer"
-            />
+            <img src={Layer} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Layer" />
           </button>
-          <img
-            src={Border}
-            className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-            alt="Separator"
-          />
+          <img src={Border} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Separator" />
           <button className="p-1 shrink-0">
-            <img
-              src={Grid1}
-              className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-              alt="Grid1"
-            />
+            <img src={Grid1} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Grid1" />
           </button>
           <button className="p-1 shrink-0">
-            <img
-              src={Grid4}
-              className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-              alt="Grid4"
-            />
+            <img src={Grid4} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Grid4" />
           </button>
           <button className="p-1 shrink-0">
             <img src={Undo} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Undo" />
@@ -113,41 +96,21 @@ export default function MainViewerArea({
           <button className="p-1 shrink-0">
             <img src={Redo} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Redo" />
           </button>
-          <img
-            src={Border}
-            className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-            alt="Separator"
-          />
+          <img src={Border} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Separator" />
           <button className="p-1 shrink-0">
-            <img
-              src={Ruler}
-              className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-              alt="Ruler"
-            />
+            <img src={Ruler} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Ruler" />
           </button>
           <button className="p-1 shrink-0">
             <img src={Draw} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" />
           </button>
           <button className="p-1 shrink-0">
-            <img
-              src={ArrowRight}
-              className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-              alt="Arrow"
-            />
+            <img src={ArrowRight} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Arrow" />
           </button>
           <button className="p-1 shrink-0">
-            <img
-              src={Circle}
-              className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-              alt="Circle"
-            />
+            <img src={Circle} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Circle" />
           </button>
           <button className="p-1 shrink-0">
-            <img
-              src={Refresh}
-              className="h-3 w-4.5 sm:h-5 sm:w-6.5"
-              alt="Refresh"
-            />
+            <img src={Refresh} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Refresh" />
           </button>
         </div>
 
@@ -177,7 +140,6 @@ export default function MainViewerArea({
       {/* Sub-toolbar */}
       <div className="flex items-center justify-between px-4 py-4 absolute top-12 left-0 right-0 z-10 pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
-          {/* AI Overlay Toggles Restored */}
           <div className="flex flex-row justify-between text-xs text-white bg-gray-3 border-gray-3 border-3 rounded">
             <div className="bg-gray-3 border-gray-3 rounded-l items-center my-auto mx-3 hidden sm:block">
               AI Overlay
@@ -198,14 +160,13 @@ export default function MainViewerArea({
       {/* Actual Scan Image Area */}
       <div
         ref={imageContainerRef}
-        className="flex-1 flex items-center justify-center sm:p-8 px-8 pb-8 pt-16 overflow-hidden relative cursor-ns-resize min-h-0"
+        className="flex-1 flex justify-center sm:p-8 px-8 pb-16 pt-16 overflow-hidden relative cursor-ns-resize min-h-0"
       >
-        {/* CONDITIONAL RENDERING FIX APPLIED HERE */}
         {activeImageSrc ? (
           <img
             src={activeImageSrc}
             alt={`Brain Scan Slice ${currentFrame}`}
-            className="select-none sm:w-3/4 sm:h-3/4 sm:object-contain"
+            className="select-none sm:w-3/4 sm:h-3/4 sm:object-contain pt-8"
             draggable="false"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -222,32 +183,47 @@ export default function MainViewerArea({
         )}
       </div>
 
-      {/* Bottom Info */}
-      <div className="absolute bottom-20 md:bottom-4 left-4 text-yellow-1 text-xs font-semibold leading-relaxed pointer-events-none z-10">
-        <div>
-          WW : {patient.scanMetadata.ww} &nbsp; WL : {patient.scanMetadata.wl}
+      {/* NEW: Custom Range Slider with Anomaly Markers */}
+      <div className="absolute bottom-28 md:bottom-20 left-10 right-10 z-20">
+        <div className="relative flex items-center w-full h-6">
+          {/* Base Track */}
+          <div className="absolute left-0 right-0 h-1 bg-gray-6 rounded pointer-events-none"></div>
+
+          {/* Anomaly Markers (Red Lines) */}
+          {importantSlices.map((sliceIndex: number) => {
+            // Calculate percentage to position the red marker correctly along the track
+            const positionPercent = maxFrames > 1 ? ((sliceIndex - 1) / (maxFrames - 1)) * 100 : 0;
+            return (
+              <div
+                key={sliceIndex}
+                className="absolute h-3 w-[2px] bg-red-600 top-1/2 -translate-y-1/2 pointer-events-none z-10"
+                style={{ left: `${positionPercent}%` }}
+              />
+            );
+          })}
+
+          {/* Interactive Range Input */}
+          <input
+            type="range"
+            min={1}
+            max={maxFrames}
+            value={currentFrame}
+            onChange={(e) => setCurrentFrame(Number(e.target.value))}
+            className="absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer z-20 
+                       focus:outline-none
+                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-gray-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow
+                       [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-gray-4 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full"
+          />
         </div>
-        <div>ZOOM : {patient.scanMetadata.zoom}</div>
-        <div>THICKNESS : {patient.scanMetadata.thickness}</div>
       </div>
 
-      {/* Bottom Navigation Models - Restored Full Buttons */}
-      <div className="absolute bottom-4 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 flex border border-gray-6 rounded bg-gray-10 text-xs font-semibold overflow-x-auto z-10">
-        <button className="px-4 py-2 bg-gray-6 text-white whitespace-nowrap shrink-0">
-          AI MODEL
-        </button>
-        <button className="px-4 py-2 text-gray-1 hover:text-white whitespace-nowrap shrink-0">
-          RAW
-        </button>
-        <button className="px-4 py-2 text-gray-1 hover:text-white whitespace-nowrap shrink-0">
-          JASMINE
-        </button>
-        <button className="px-4 py-2 text-gray-1 hover:text-white whitespace-nowrap shrink-0">
-          SYNTHSEG
-        </button>
-        <button className="px-4 py-2 text-gray-1 hover:text-white whitespace-nowrap shrink-0">
-          PALAPA
-        </button>
+      {/* Bottom Info */}
+      <div className="absolute bottom-12 md:bottom-4 left-4 text-yellow-1 text-xs font-semibold leading-relaxed pointer-events-none z-10">
+        <div>
+          WW : {patient?.scanMetadata?.ww} &nbsp; WL : {patient?.scanMetadata?.wl}
+        </div>
+        <div>ZOOM : {patient?.scanMetadata?.zoom}</div>
+        <div>THICKNESS : {patient?.scanMetadata?.thickness}</div>
       </div>
     </main>
   );
