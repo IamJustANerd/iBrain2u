@@ -25,7 +25,7 @@ export function usePatientScan(
     const fetchPatientData = async () => {
       if (!id) return;
       try {
-        const path = `./constant/${id}.tsx`;
+        const path = `../constant/${id}.tsx`;
         if (patientModules[path]) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const module = (await patientModules[path]()) as any;

@@ -2,10 +2,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import Logo2 from "./assets/logo_2.svg";
-import DarkLightMode from "./assets/icons/blue/darkLightMode.svg";
-import Refresh from "./assets/icons/gray/refresh.svg";
-import Search from "./assets/icons/gray/search.svg";
+import Logo2 from "../assets/logo_2.svg";
+import DarkLightMode from "../assets/icons/blue/darkLightMode.svg";
+import Refresh from "../assets/icons/gray/refresh.svg";
+import Search from "../assets/icons/gray/search.svg";
 
 // Dummy Data exactly as shown in the mockup
 const DUMMY_PATIENTS = [

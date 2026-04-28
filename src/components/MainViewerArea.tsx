@@ -69,6 +69,46 @@ export default function MainViewerArea({
     return map;
   }, [analysisData]);
 
+  // Group ALL contiguous slices into "Islands", regardless of their anomaly levels
+  const markerIslands = useMemo(() => {
+    // Structure: { start: number, end: number, slices: { slice: number, levels: string[] }[] }
+    const islands: { start: number; end: number; slices: { slice: number; levels: string[] }[] }[] = [];
+    
+    // Get all slice indices that have markers, sorted numerically
+    const sortedSlices = Object.keys(markersBySlice)
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    if (sortedSlices.length === 0) return islands;
+
+    let currentIsland = {
+      start: sortedSlices[0],
+      end: sortedSlices[0],
+      slices: [{ slice: sortedSlices[0], levels: markersBySlice[sortedSlices[0]] }]
+    };
+
+    for (let i = 1; i < sortedSlices.length; i++) {
+      const slice = sortedSlices[i];
+      const prevSlice = sortedSlices[i - 1];
+
+      if (slice === prevSlice + 1) {
+        // If it's the exact next frame, extend the current island
+        currentIsland.end = slice;
+        currentIsland.slices.push({ slice, levels: markersBySlice[slice] });
+      } else {
+        // Break in continuity found, push the old island and start a new one
+        islands.push(currentIsland);
+        currentIsland = {
+          start: slice,
+          end: slice,
+          slices: [{ slice, levels: markersBySlice[slice] }]
+        };
+      }
+    }
+    islands.push(currentIsland); // Push the final island
+
+    return islands;
+  }, [markersBySlice]);
   // Check if current frame is marked in our map
   const isCurrentFrameImportant = !!markersBySlice[currentFrame];
 
@@ -256,31 +296,39 @@ export default function MainViewerArea({
           />
 
           {/* Anomaly Markers */}
-          {Object.entries(markersBySlice).map(([sliceStr, levels]) => {
-            const sliceIndex = Number(sliceStr);
-            const positionPercent = maxFrames > 1 ? ((sliceIndex - 1) / (maxFrames - 1)) * 100 : 0;
+          {markerIslands.map((island) => {
+            const startPercent = maxFrames > 1 ? ((island.start - 1) / (maxFrames - 1)) * 100 : 0;
+            const startOffset = (thumbWidth / 2) - (startPercent / 100) * thumbWidth;
             
-            // Fixed width to match w-6 (24px)
-            const offset = (thumbWidth / 2) - (positionPercent / 100) * thumbWidth;
-            
+            const endPercent = maxFrames > 1 ? ((island.end - 1) / (maxFrames - 1)) * 100 : 0;
+            const endOffset = (thumbWidth / 2) - (endPercent / 100) * thumbWidth;
+
             return (
               <div
-                key={sliceIndex}
-                className="absolute h-3 w-[2px] top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col pointer-events-none z-10 overflow-hidden"
-                style={{ left: `calc(${positionPercent}% + ${offset}px)` }}
+                key={`island-${island.start}-${island.end}`}
+                // Changed to flex-row to stack the different colored slices horizontally
+                className="absolute h-3 top-1/2 -translate-y-1/2 flex flex-row pointer-events-none z-10 overflow-hidden"
+                style={{ 
+                  left: `calc(${startPercent}% + ${startOffset}px - 1px)`,
+                  right: `calc(100% - (${endPercent}% + ${endOffset}px) - 1px)`
+                }}
               >
-                {levels.map((lvl) => {
-                  let bgClass = "bg-gray-1"; 
-                  if (lvl === "lvl1") bgClass = "bg-red-1";
-                  if (lvl === "lvl2") bgClass = "bg-yellow-1";
-                  if (lvl === "lvl3") bgClass = "bg-purple-1";
+                {/* Map through every slice inside this contiguous island */}
+                {island.slices.map((sliceData) => (
+                  <div key={sliceData.slice} className="flex-1 flex flex-col">
+                    {sliceData.levels.map((lvl) => {
+                      let bgClass = "bg-gray-1"; 
+                      if (lvl === "lvl1") bgClass = "bg-red-1";
+                      if (lvl === "lvl2") bgClass = "bg-yellow-1";
+                      if (lvl === "lvl3") bgClass = "bg-purple-1";
 
-                  return <div key={lvl} className={`w-full flex-1 ${bgClass}`} />;
-                })}
+                      return <div key={lvl} className={`w-full flex-1 ${bgClass}`} />;
+                    })}
+                  </div>
+                ))}
               </div>
             );
           })}
-
         </div>
       </div>
 

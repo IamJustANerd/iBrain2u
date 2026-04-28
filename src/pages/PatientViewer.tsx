@@ -1,17 +1,17 @@
 // src/pages/PatientViewer.tsx
 import { useParams } from "react-router-dom";
-import { usePatientScan } from "./hooks/usePatientScan";
+import { usePatientScan } from "../hooks/usePatientScan";
 
-import TopNavbar from "./components/TopNavbar";
-import SidebarLeft from "./components/SidebarLeft";
-import MainViewerArea from "./components/MainViewerArea";
-import AiAnalysisPanel from "./components/AIAnalysisPanel";
+import TopNavbar from "../components/TopNavbar";
+import SidebarLeft from "../components/SidebarLeft";
+import MainViewerArea from "../components/MainViewerArea";
+import AiAnalysisPanel from "../components/AIAnalysisPanel";
 
 // dummy data
-import mockData from "./constant/mockServerData.json";
+import mockData from "../constant/mockServerData.json";
 
 // 1. Vite glob evaluates correctly because it's relative to THIS file
-const patientModules = import.meta.glob("./constant/*.tsx");
+const patientModules = import.meta.glob("../constant/*.tsx");
 
 export default function PatientViewer() {
   const { id } = useParams<{ id: string }>();
