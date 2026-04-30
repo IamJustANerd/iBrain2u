@@ -31,6 +31,10 @@ export default function MainViewerArea({
   // NEW: State to track which tool is currently selected
   const [activeTool, setActiveTool] = useState<string>("move");
 
+  // NEW: Zoom & Magnifier States
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [isMagnifierOpen, setIsMagnifierOpen] = useState<boolean>(false);
+
   return (
     <main className="flex-1 flex flex-col relative bg-gray-11 min-h-0 min-w-0">
       
@@ -41,6 +45,9 @@ export default function MainViewerArea({
         maxFrames={maxFrames} 
         activeTool={activeTool}            // Passed down
         setActiveTool={setActiveTool}      // Passed down
+        zoomLevel={zoomLevel}
+        setZoomLevel={setZoomLevel}
+        setIsMagnifierOpen={setIsMagnifierOpen}
       />
 
       <ViewerCanvas 
@@ -49,6 +56,9 @@ export default function MainViewerArea({
         maxFrames={maxFrames} 
         setCurrentFrame={setCurrentFrame} 
         activeTool={activeTool}            // Passed down! This fixes your TS Error.
+        zoomLevel={zoomLevel}
+        isMagnifierOpen={isMagnifierOpen}
+        setIsMagnifierOpen={setIsMagnifierOpen}
       />
 
       <ImportantSlider 
