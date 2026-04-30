@@ -1,9 +1,9 @@
 // src/components/SidebarLeft.tsx
 export default function SidebarLeft() {
-  const modes = ["FLAIR", "T1 W", "T2 W", "DWI", "ADC"];
+  const modes = ["T1 Bravo", "T1 Contrast", "T1", "T2", "DWI", "SWAN", "GRE", "ADC", "FLAIR"];
 
   return (
-    <aside className="w-16 sm:w-24 items-center bg-gray-11 border-r-3 border-gray-6 flex flex-col gap-3 p-3 shrink-0">
+    <aside className="w-16 sm:w-24 items-center bg-gray-11 border-r-3 border-gray-6 flex flex-col gap-3 p-3 shrink-0 custom-scrollbar">
       {modes.map((mode) => (
         <button
           key={mode}

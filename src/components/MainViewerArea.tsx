@@ -46,7 +46,7 @@ export default function MainViewerArea({
 
   // Group important slices by their frame number to handle overlaps
   const markersBySlice = useMemo(() => {
-    // Structure: { [sliceIndex: number]: string[] } -> { 65: ['lvl1', 'lvl2'] }
+    // Structure: { [sliceIndex: number]: string[] } -> { 65: ['diagnosis', 'subtype'] }
     const map: Record<number, string[]> = {};
     
     if (analysisData) {
@@ -64,7 +64,7 @@ export default function MainViewerArea({
       });
     }
 
-    // Ensure they are sorted so lvl1 is top, lvl2 middle, lvl3 bottom
+    // Ensure they are sorted for consistent stacking
     Object.values(map).forEach(levels => levels.sort());
     return map;
   }, [analysisData]);
@@ -109,6 +109,7 @@ export default function MainViewerArea({
 
     return islands;
   }, [markersBySlice]);
+
   // Check if current frame is marked in our map
   const isCurrentFrameImportant = !!markersBySlice[currentFrame];
 
@@ -266,7 +267,7 @@ export default function MainViewerArea({
       <div className="absolute bottom-28 md:bottom-20 left-60 right-60 z-20">
         <div className="relative flex items-center w-full h-6">
           
-          {/* UPDATED: Dialog Box (Comment Tooltip) positioned to the Bottom Right */}
+          {/* Dialog Box (Comment Tooltip) */}
           <div 
             className="absolute top-full flex justify-center items-center pointer-events-none z-30"
             style={{ 
@@ -295,7 +296,7 @@ export default function MainViewerArea({
             className={`absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer z-20 transition-opacity duration-200 focus:outline-none ${thumbClasses} [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:transition-colors [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:transition-colors`}
           />
 
-          {/* Anomaly Markers */}
+          {/* Anomaly Markers (Corrected) */}
           {markerIslands.map((island) => {
             const startPercent = maxFrames > 1 ? ((island.start - 1) / (maxFrames - 1)) * 100 : 0;
             const startOffset = (thumbWidth / 2) - (startPercent / 100) * thumbWidth;
@@ -306,7 +307,6 @@ export default function MainViewerArea({
             return (
               <div
                 key={`island-${island.start}-${island.end}`}
-                // Changed to flex-row to stack the different colored slices horizontally
                 className="absolute h-3 top-1/2 -translate-y-1/2 flex flex-row pointer-events-none z-10 overflow-hidden"
                 style={{ 
                   left: `calc(${startPercent}% + ${startOffset}px - 1px)`,
@@ -318,9 +318,9 @@ export default function MainViewerArea({
                   <div key={sliceData.slice} className="flex-1 flex flex-col">
                     {sliceData.levels.map((lvl) => {
                       let bgClass = "bg-gray-1"; 
-                      if (lvl === "lvl1") bgClass = "bg-red-1";
-                      if (lvl === "lvl2") bgClass = "bg-yellow-1";
-                      if (lvl === "lvl3") bgClass = "bg-purple-1";
+                      if (lvl === "diagnosis") bgClass = "bg-red-1";    
+                      if (lvl === "subtype") bgClass = "bg-yellow-1";   
+                      if (lvl === "stage") bgClass = "bg-purple-1";     
 
                       return <div key={lvl} className={`w-full flex-1 ${bgClass}`} />;
                     })}

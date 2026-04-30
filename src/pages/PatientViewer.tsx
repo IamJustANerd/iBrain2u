@@ -7,9 +7,6 @@ import SidebarLeft from "../components/SidebarLeft";
 import MainViewerArea from "../components/MainViewerArea";
 import AiAnalysisPanel from "../components/AIAnalysisPanel";
 
-// dummy data
-import mockData from "../constant/mockServerData.json";
-
 // 1. Vite glob evaluates correctly because it's relative to THIS file
 const patientModules = import.meta.glob("../constant/*.tsx");
 
@@ -53,11 +50,12 @@ export default function PatientViewer() {
             maxFrames={maxFrames}
             activeImageSrc={activeImageSrc}
             patient={patient}
-            // NEW: Pass the analysis object from your mock JSON
-            analysisData={mockData.analysis} 
+            // Now dynamically pulled from your 1.tsx file instead of mock JSON
+            analysisData={patient?.aiAnalysis} 
           />
         </div>
 
+        {/* The patient prop here passes the entire 1.tsx object, giving this component access to patient.aiAnalysis */}
         <AiAnalysisPanel patient={patient} setCurrentFrame={setCurrentFrame} />
       </div>
     </div>
