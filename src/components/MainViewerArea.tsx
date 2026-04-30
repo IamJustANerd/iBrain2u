@@ -1,4 +1,5 @@
 // src/components/MainViewerArea.tsx
+import { useState } from "react";
 import Toolbar from "./Toolbar";
 import ViewerCanvas from "./ViewerCanvas";
 import ImportantSlider from "./ImportantSlider";
@@ -27,6 +28,9 @@ export default function MainViewerArea({
   analysisData,
 }: MainViewerAreaProps) {
   
+  // NEW: State to track which tool is currently selected
+  const [activeTool, setActiveTool] = useState<string>("move");
+
   return (
     <main className="flex-1 flex flex-col relative bg-gray-11 min-h-0 min-w-0">
       
@@ -35,6 +39,8 @@ export default function MainViewerArea({
         setAxis={setAxis} 
         currentFrame={currentFrame} 
         maxFrames={maxFrames} 
+        activeTool={activeTool}            // Passed down
+        setActiveTool={setActiveTool}      // Passed down
       />
 
       <ViewerCanvas 
@@ -42,6 +48,7 @@ export default function MainViewerArea({
         currentFrame={currentFrame} 
         maxFrames={maxFrames} 
         setCurrentFrame={setCurrentFrame} 
+        activeTool={activeTool}            // Passed down! This fixes your TS Error.
       />
 
       <ImportantSlider 
