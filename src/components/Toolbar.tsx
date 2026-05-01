@@ -28,12 +28,17 @@ interface ToolbarProps {
   zoomLevel: number;
   setZoomLevel: (zoom: number) => void;
   setIsMagnifierOpen: (isOpen: boolean) => void;
+  flipState: { horizontal: boolean; vertical: boolean };
+  setFlipState: React.Dispatch<React.SetStateAction<{ horizontal: boolean; vertical: boolean }>>;
+  activeFlipMode: "horizontal" | "vertical";
+  setActiveFlipMode: React.Dispatch<React.SetStateAction<"horizontal" | "vertical">>;
 }
 
 export default function Toolbar({ 
   axis, setAxis, currentFrame, maxFrames, 
   activeTool, setActiveTool, 
-  zoomLevel, setZoomLevel, setIsMagnifierOpen 
+  zoomLevel, setZoomLevel, setIsMagnifierOpen,
+  flipState, setFlipState, activeFlipMode, setActiveFlipMode
 }: ToolbarProps) {
 
   const getButtonClass = (toolName: string) => {
@@ -127,10 +132,43 @@ export default function Toolbar({
             <img src={WindowLevel} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Window Level" />
           </button>
           <button className="p-1 shrink-0"><img src={Draw} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" /></button>
-          <div className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors group-hover:bg-gray-6 cursor-default">
-              <img src={FlipHorizontal} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Zoom" />
-              <img src={Dropdown} className=""></img>
+          {/* FLIP HOVER DROPDOWN */}
+          <div className="relative group flex items-center h-full">
+            <button 
+              className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors hover:bg-gray-6 cursor-pointer"
+              onClick={() => {
+                if (activeFlipMode === "horizontal") {
+                  setFlipState(prev => ({ ...prev, horizontal: !prev.horizontal }));
+                } else {
+                  setFlipState(prev => ({ ...prev, vertical: !prev.vertical }));
+                }
+              }}
+            >
+              <img src={activeFlipMode === "horizontal" ? FlipHorizontal : FlipVertical} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Flip" />
+              <img src={Dropdown} className="w-2 h-2 ml-0.5" alt="Dropdown Arrow" />
+            </button>
+            
+            <div className="absolute hidden group-hover:block top-full left-0 z-50 pt-2">
+              <div className="bg-gray-7 border border-gray-5 rounded shadow-xl min-w-[150px] text-sm text-gray-200 overflow-hidden flex flex-col">
+                <button 
+                  className="w-full flex items-center px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors"
+                  onClick={() => {
+                    // Set the new mode AND immediately execute the flip
+                    const newMode = activeFlipMode === "horizontal" ? "vertical" : "horizontal";
+                    setActiveFlipMode(newMode);
+                    if (newMode === "horizontal") {
+                      setFlipState(prev => ({ ...prev, horizontal: !prev.horizontal }));
+                    } else {
+                      setFlipState(prev => ({ ...prev, vertical: !prev.vertical }));
+                    }
+                  }}
+                >
+                  <img src={activeFlipMode === "horizontal" ? FlipVertical : FlipHorizontal} className="h-4 w-4 mr-3" alt="Other Flip" />
+                  {activeFlipMode === "horizontal" ? "Flip Vertical" : "Flip Horizontal"}
+                </button>
+              </div>
             </div>
+          </div>
           <button className="p-1 shrink-0"><img src={Refresh} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Refresh" /></button>
 
         </div>

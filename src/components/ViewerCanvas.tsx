@@ -11,6 +11,7 @@ interface ViewerCanvasProps {
   setIsMagnifierOpen: (isOpen: boolean) => void;
   windowLevel: { brightness: number; contrast: number };
   setWindowLevel: React.Dispatch<React.SetStateAction<{ brightness: number; contrast: number }>>;
+  flipState: { horizontal: boolean; vertical: boolean };
 }
 
 export default function ViewerCanvas({
@@ -23,7 +24,8 @@ export default function ViewerCanvas({
   isMagnifierOpen,
   setIsMagnifierOpen,
   windowLevel,
-  setWindowLevel
+  setWindowLevel,
+  flipState
 }: ViewerCanvasProps) {
   const scrollAccumulator = useRef(0);
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -48,7 +50,6 @@ export default function ViewerCanvas({
 
   // --- Main Canvas Mouse Handlers ---
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only intercept if the tool is 'move' or 'windowLevel'
     if (activeTool !== "move" && activeTool !== "windowLevel") return;
     
     setIsDragging(true);
@@ -59,7 +60,6 @@ export default function ViewerCanvas({
         y: e.clientY - panOffset.y,
       };
     } else if (activeTool === "windowLevel") {
-      // Record starting mouse position and the current brightness/contrast state
       dragStart.current = { x: e.clientX, y: e.clientY };
       initialWindowLevel.current = { ...windowLevel };
     }
@@ -74,16 +74,12 @@ export default function ViewerCanvas({
         y: e.clientY - dragStart.current.y,
       });
     } else if (activeTool === "windowLevel") {
-      // Calculate how far the mouse has moved since the click
       const deltaX = e.clientX - dragStart.current.x;
       const deltaY = e.clientY - dragStart.current.y;
 
-      // Sensitivity multipliers (adjust these to make the tool feel right)
       const brightnessSensitivity = 0.005; 
       const contrastSensitivity = 0.005;
 
-      // Moving UP decreases Y, so we subtract deltaY to increase brightness when moving up
-      // Moving RIGHT increases X, so we add deltaX to increase contrast when moving right
       const newBrightness = Math.max(0, initialWindowLevel.current.brightness - (deltaY * brightnessSensitivity));
       const newContrast = Math.max(0, initialWindowLevel.current.contrast + (deltaX * contrastSensitivity));
 
@@ -103,7 +99,6 @@ export default function ViewerCanvas({
     const container = imageContainerRef.current;
     if (!container) return;
 
-    // Observe container size so the magnifier can exact-match the parent layout
     const observer = new ResizeObserver(() => {
       const rect = container.getBoundingClientRect();
       setContainerSize({ w: rect.width, h: rect.height });
@@ -136,6 +131,13 @@ export default function ViewerCanvas({
   if (activeTool === "move") cursorStyle = isDragging ? "cursor-grabbing" : "cursor-grab";
   if (activeTool === "windowLevel") cursorStyle = "cursor-crosshair";
 
+  // Calculate scaling for both zoom and flip
+  const scaleX = zoomLevel * (flipState.horizontal ? -1 : 1);
+  const scaleY = zoomLevel * (flipState.vertical ? -1 : 1);
+
+  // Determine vertical placement of L/R markers
+  const verticalPositionClass = flipState.vertical ? "top-8" : "bottom-8";
+
   return (
     <div
       ref={imageContainerRef}
@@ -145,6 +147,14 @@ export default function ViewerCanvas({
       onMouseUp={handleMouseUpOrLeave}
       onMouseLeave={handleMouseUpOrLeave}
     >
+      {/* Patient Left/Right Markers (Now dynamically positioned top/bottom!) */}
+      <div className={`absolute ${verticalPositionClass} left-8 text-yellow-1 text-xl font-bold select-none pointer-events-none z-10`}>
+        {flipState.horizontal ? "R" : "L"}
+      </div>
+      <div className={`absolute ${verticalPositionClass} right-8 text-yellow-1 text-xl font-bold select-none pointer-events-none z-10`}>
+        {flipState.horizontal ? "L" : "R"}
+      </div>
+
       {activeImageSrc ? (
         <img
           src={activeImageSrc}
@@ -153,7 +163,7 @@ export default function ViewerCanvas({
           draggable="false"
           onDragStart={(e) => e.preventDefault()}
           style={{
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scaleX}, ${scaleY})`,
             filter: `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast})`,
             transition: isDragging ? "none" : "transform 0.15s ease-out",
           }}
@@ -172,6 +182,7 @@ export default function ViewerCanvas({
           zoomLevel={zoomLevel}
           containerSize={containerSize}
           windowLevel={windowLevel}
+          flipState={flipState}
         />
       )}
     </div>
@@ -188,16 +199,16 @@ interface MagnifierProps {
   zoomLevel: number;
   containerSize: { w: number; h: number };
   windowLevel: { brightness: number; contrast: number };
+  flipState: { horizontal: boolean; vertical: boolean };
 }
 
-function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, containerSize, windowLevel }: MagnifierProps) {
+function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, containerSize, windowLevel, flipState }: MagnifierProps) {
   const [pos, setPos] = useState({ x: 50, y: 50 });
   const [magZoom, setMagZoom] = useState(2.0);
   
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
-  // Use window events so dragging doesn't break if mouse moves outside the window
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
@@ -220,7 +231,6 @@ function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, contai
     };
   }, []);
 
-  // Intercept mousedown to start dragging and prevent event from hitting the main canvas
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation(); 
     isDraggingRef.current = true;
@@ -230,13 +240,15 @@ function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, contai
     };
   };
 
+  const scaleX = zoomLevel * (flipState.horizontal ? -1 : 1);
+  const scaleY = zoomLevel * (flipState.vertical ? -1 : 1);
+
   return (
     <div
       className="absolute z-50 w-64 bg-black border border-gray-3 shadow-2xl flex flex-col cursor-move"
       style={{ top: `${pos.y}px`, left: `${pos.x}px` }}
       onMouseDown={handleMouseDown}
     >
-      {/* Close Button */}
       <button 
         onClick={(e) => { e.stopPropagation(); onClose(); }}
         className="absolute top-1 right-1 z-20 bg-white text-black leading-none font-bold text-xs p-1 rounded-sm hover:bg-red-500 hover:text-white"
@@ -245,26 +257,25 @@ function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, contai
         ✕
       </button>
 
-      {/* The Lens Area */}
       <div className="h-64 relative overflow-hidden bg-black pointer-events-none">
         <div 
           className="flex justify-center sm:p-8 px-8 pb-16 pt-16 relative"
           style={{
             position: 'absolute',
-            top: -(pos.y + 1), // Offset by 1px to account for the border
+            top: -(pos.y + 1),
             left: -(pos.x + 1),
             width: containerSize.w || '100%',
             height: containerSize.h || '100%',
-            transformOrigin: `${pos.x + 128}px ${pos.y + 128}px`, // Center of the 256px wide window
+            transformOrigin: `${pos.x + 128}px ${pos.y + 128}px`, 
             transform: `scale(${magZoom})`
           }}
         >
-          {/* Mirrored Image */}
           <img
             src={activeImageSrc}
             className="select-none sm:w-3/4 sm:h-3/4 sm:object-contain pt-8 origin-center"
             style={{
-              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+              // FIXED: Added scaleX and scaleY to the magnifier's inner image
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scaleX}, ${scaleY})`,
               filter: `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast})`,
             }}
             draggable="false"
@@ -273,7 +284,6 @@ function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, contai
         </div>
       </div>
 
-      {/* Bottom Control Bar */}
       <div 
         className="h-8 bg-black border-t border-gray-4 flex items-center px-2 gap-2 text-white text-xs cursor-default"
         onMouseDown={(e) => e.stopPropagation()} 

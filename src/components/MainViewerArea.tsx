@@ -37,6 +37,9 @@ export default function MainViewerArea({
 
   // Default brightness is 1 (100%), default contrast is 1 (100%)
   const [windowLevel, setWindowLevel] = useState({ brightness: 1, contrast: 1 });
+  
+  const [flipState, setFlipState] = useState({ horizontal: false, vertical: false });
+  const [activeFlipMode, setActiveFlipMode] = useState<"horizontal" | "vertical">("horizontal");
 
   return (
     <main className="flex-1 flex flex-col relative bg-black min-h-0 min-w-0">
@@ -46,18 +49,22 @@ export default function MainViewerArea({
         setAxis={setAxis} 
         currentFrame={currentFrame} 
         maxFrames={maxFrames} 
-        activeTool={activeTool}            // Passed down
-        setActiveTool={setActiveTool}      // Passed down
+        activeTool={activeTool}
+        setActiveTool={setActiveTool}
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
         setIsMagnifierOpen={setIsMagnifierOpen}
+        flipState={flipState}
+        activeFlipMode={activeFlipMode}
+        setFlipState={setFlipState}
+        setActiveFlipMode={setActiveFlipMode}
       />
 
       <ViewerCanvas 
         activeImageSrc={activeImageSrc} currentFrame={currentFrame} maxFrames={maxFrames} setCurrentFrame={setCurrentFrame} 
         activeTool={activeTool} zoomLevel={zoomLevel} isMagnifierOpen={isMagnifierOpen} setIsMagnifierOpen={setIsMagnifierOpen}
         // Pass the new state down
-        windowLevel={windowLevel} setWindowLevel={setWindowLevel}
+        windowLevel={windowLevel} setWindowLevel={setWindowLevel} flipState={flipState}
       />
 
       <ImportantSlider 
