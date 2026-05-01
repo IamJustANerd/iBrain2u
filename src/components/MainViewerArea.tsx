@@ -35,6 +35,9 @@ export default function MainViewerArea({
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [isMagnifierOpen, setIsMagnifierOpen] = useState<boolean>(false);
 
+  // Default brightness is 1 (100%), default contrast is 1 (100%)
+  const [windowLevel, setWindowLevel] = useState({ brightness: 1, contrast: 1 });
+
   return (
     <main className="flex-1 flex flex-col relative bg-black min-h-0 min-w-0">
       
@@ -51,14 +54,10 @@ export default function MainViewerArea({
       />
 
       <ViewerCanvas 
-        activeImageSrc={activeImageSrc} 
-        currentFrame={currentFrame} 
-        maxFrames={maxFrames} 
-        setCurrentFrame={setCurrentFrame} 
-        activeTool={activeTool}            // Passed down! This fixes your TS Error.
-        zoomLevel={zoomLevel}
-        isMagnifierOpen={isMagnifierOpen}
-        setIsMagnifierOpen={setIsMagnifierOpen}
+        activeImageSrc={activeImageSrc} currentFrame={currentFrame} maxFrames={maxFrames} setCurrentFrame={setCurrentFrame} 
+        activeTool={activeTool} zoomLevel={zoomLevel} isMagnifierOpen={isMagnifierOpen} setIsMagnifierOpen={setIsMagnifierOpen}
+        // Pass the new state down
+        windowLevel={windowLevel} setWindowLevel={setWindowLevel}
       />
 
       <ImportantSlider 

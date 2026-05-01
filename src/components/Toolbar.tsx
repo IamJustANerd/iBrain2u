@@ -120,7 +120,12 @@ export default function Toolbar({
           <button className="p-1 shrink-0"><img src={Undo} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Undo" /></button>
           <button className="p-1 shrink-0"><img src={Redo} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Redo" /></button>
           <img src={Border} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Separator" />
-          <button className="p-1 shrink-0"><img src={WindowLevel} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" /></button>
+          <button 
+            className={getButtonClass("windowLevel")} 
+            onClick={() => setActiveTool("windowLevel")}
+          >
+            <img src={WindowLevel} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Window Level" />
+          </button>
           <button className="p-1 shrink-0"><img src={Draw} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" /></button>
           <div className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors group-hover:bg-gray-6 cursor-default">
               <img src={FlipHorizontal} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Zoom" />
