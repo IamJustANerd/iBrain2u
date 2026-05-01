@@ -36,7 +36,7 @@ export default function MainViewerArea({
   const [isMagnifierOpen, setIsMagnifierOpen] = useState<boolean>(false);
 
   return (
-    <main className="flex-1 flex flex-col relative bg-gray-11 min-h-0 min-w-0">
+    <main className="flex-1 flex flex-col relative bg-black min-h-0 min-w-0">
       
       <Toolbar 
         axis={axis} 
