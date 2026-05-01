@@ -11,6 +11,7 @@ import Move from "../assets/icons/gray/move.svg";
 import Redo from "../assets/icons/gray/redo.svg";
 import Refresh from "../assets/icons/gray/refresh.svg";
 import Ruler from "../assets/icons/gray/ruler.svg";
+import Invert from "../assets/icons/gray/ruler.svg" // Note, still use ruler.svg until the icon is made
 import FlipHorizontal from "../assets/icons/gray/flip_horizontal.svg";
 import FlipVertical from "../assets/icons/gray/flip_vertical.svg";
 import WindowLevel from "../assets/icons/gray/window-level.svg";
@@ -32,13 +33,16 @@ interface ToolbarProps {
   setFlipState: React.Dispatch<React.SetStateAction<{ horizontal: boolean; vertical: boolean }>>;
   activeFlipMode: "horizontal" | "vertical";
   setActiveFlipMode: React.Dispatch<React.SetStateAction<"horizontal" | "vertical">>;
+  isInverted: boolean;
+  setIsInverted: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export default function Toolbar({ 
   axis, setAxis, currentFrame, maxFrames, 
   activeTool, setActiveTool, 
   zoomLevel, setZoomLevel, setIsMagnifierOpen,
-  flipState, setFlipState, activeFlipMode, setActiveFlipMode
+  flipState, setFlipState, activeFlipMode,
+  setActiveFlipMode, isInverted, setIsInverted
 }: ToolbarProps) {
 
   const getButtonClass = (toolName: string) => {
@@ -131,6 +135,14 @@ export default function Toolbar({
           >
             <img src={WindowLevel} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Window Level" />
           </button>
+          
+          <button 
+            className={`p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors ${isInverted ? 'bg-gray-4' : 'hover:bg-gray-6'}`}
+            onClick={() => setIsInverted(prev => !prev)}
+          >
+            <img src={Invert} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Invert" />
+          </button>
+
           <button className="p-1 shrink-0"><img src={Draw} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" /></button>
           {/* FLIP HOVER DROPDOWN */}
           <div className="relative group flex items-center h-full">
@@ -170,7 +182,6 @@ export default function Toolbar({
             </div>
           </div>
           <button className="p-1 shrink-0"><img src={Refresh} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Refresh" /></button>
-
         </div>
 
         {/* View Switcher */}

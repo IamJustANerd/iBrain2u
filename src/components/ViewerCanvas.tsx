@@ -12,6 +12,7 @@ interface ViewerCanvasProps {
   windowLevel: { brightness: number; contrast: number };
   setWindowLevel: React.Dispatch<React.SetStateAction<{ brightness: number; contrast: number }>>;
   flipState: { horizontal: boolean; vertical: boolean };
+  isInverted: boolean;
 }
 
 export default function ViewerCanvas({
@@ -25,7 +26,8 @@ export default function ViewerCanvas({
   setIsMagnifierOpen,
   windowLevel,
   setWindowLevel,
-  flipState
+  flipState,
+  isInverted
 }: ViewerCanvasProps) {
   const scrollAccumulator = useRef(0);
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -138,6 +140,9 @@ export default function ViewerCanvas({
   // Determine vertical placement of L/R markers
   const verticalPositionClass = flipState.vertical ? "top-8" : "bottom-8";
 
+  // Build the filter string dynamically
+  const filterStyle = `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast}) ${isInverted ? 'invert(1)' : ''}`;
+
   return (
     <div
       ref={imageContainerRef}
@@ -147,7 +152,7 @@ export default function ViewerCanvas({
       onMouseUp={handleMouseUpOrLeave}
       onMouseLeave={handleMouseUpOrLeave}
     >
-      {/* Patient Left/Right Markers (Now dynamically positioned top/bottom!) */}
+      {/* Patient Left/Right Markers */}
       <div className={`absolute ${verticalPositionClass} left-8 text-yellow-1 text-xl font-bold select-none pointer-events-none z-10`}>
         {flipState.horizontal ? "R" : "L"}
       </div>
@@ -164,7 +169,7 @@ export default function ViewerCanvas({
           onDragStart={(e) => e.preventDefault()}
           style={{
             transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scaleX}, ${scaleY})`,
-            filter: `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast})`,
+            filter: filterStyle, // <--- FIXED: Now using the dynamic variable!
             transition: isDragging ? "none" : "transform 0.15s ease-out",
           }}
         />
@@ -183,6 +188,7 @@ export default function ViewerCanvas({
           containerSize={containerSize}
           windowLevel={windowLevel}
           flipState={flipState}
+          isInverted={isInverted}
         />
       )}
     </div>
@@ -200,9 +206,10 @@ interface MagnifierProps {
   containerSize: { w: number; h: number };
   windowLevel: { brightness: number; contrast: number };
   flipState: { horizontal: boolean; vertical: boolean };
+  isInverted: boolean;
 }
 
-function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, containerSize, windowLevel, flipState }: MagnifierProps) {
+function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, containerSize, windowLevel, flipState, isInverted }: MagnifierProps) {
   const [pos, setPos] = useState({ x: 50, y: 50 });
   const [magZoom, setMagZoom] = useState(2.0);
   
@@ -242,6 +249,7 @@ function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, contai
 
   const scaleX = zoomLevel * (flipState.horizontal ? -1 : 1);
   const scaleY = zoomLevel * (flipState.vertical ? -1 : 1);
+  const filterStyle = `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast}) ${isInverted ? 'invert(1)' : ''}`;
 
   return (
     <div
@@ -274,9 +282,8 @@ function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, contai
             src={activeImageSrc}
             className="select-none sm:w-3/4 sm:h-3/4 sm:object-contain pt-8 origin-center"
             style={{
-              // FIXED: Added scaleX and scaleY to the magnifier's inner image
               transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scaleX}, ${scaleY})`,
-              filter: `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast})`,
+              filter: filterStyle, 
             }}
             draggable="false"
             alt="Magnified View"
@@ -289,24 +296,9 @@ function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, contai
         onMouseDown={(e) => e.stopPropagation()} 
       >
         <span className="w-10 text-orange-400 font-bold">{magZoom.toFixed(1)}x</span>
-        
-        <button 
-          className="bg-white text-black font-bold px-1 rounded-sm active:bg-gray-300"
-          onClick={() => setMagZoom(prev => Math.max(1, prev - 0.5))}
-        >-</button>
-        
-        <input 
-          type="range" 
-          min={1} max={10} step={0.5} 
-          value={magZoom}
-          onChange={(e) => setMagZoom(parseFloat(e.target.value))}
-          className="flex-1 h-1 bg-gray-6 appearance-none rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-white"
-        />
-        
-        <button 
-          className="bg-white text-black font-bold px-1 rounded-sm active:bg-gray-300"
-          onClick={() => setMagZoom(prev => Math.min(10, prev + 0.5))}
-        >+</button>
+        <button className="bg-white text-black font-bold px-1 rounded-sm active:bg-gray-300" onClick={() => setMagZoom(prev => Math.max(1, prev - 0.5))}>-</button>
+        <input type="range" min={1} max={10} step={0.5} value={magZoom} onChange={(e) => setMagZoom(parseFloat(e.target.value))} className="flex-1 h-1 bg-gray-6 appearance-none rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-white" />
+        <button className="bg-white text-black font-bold px-1 rounded-sm active:bg-gray-300" onClick={() => setMagZoom(prev => Math.min(10, prev + 0.5))}>+</button>
       </div>
     </div>
   );
