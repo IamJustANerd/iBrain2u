@@ -198,7 +198,7 @@ function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, contai
         ✕
       </button>
 
-      <div className="h-64 relative overflow-hidden bg-gray-10 pointer-events-none">
+      <div className="h-64 relative overflow-hidden bg-black pointer-events-none">
         <div 
           className="flex justify-center sm:p-8 px-8 pb-16 pt-16 relative"
           style={{

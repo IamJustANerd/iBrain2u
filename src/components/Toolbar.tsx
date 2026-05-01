@@ -11,8 +11,12 @@ import Move from "../assets/icons/gray/move.svg";
 import Redo from "../assets/icons/gray/redo.svg";
 import Refresh from "../assets/icons/gray/refresh.svg";
 import Ruler from "../assets/icons/gray/ruler.svg";
+import FlipHorizontal from "../assets/icons/gray/flip_horizontal.svg";
+import FlipVertical from "../assets/icons/gray/flip_vertical.svg";
+import WindowLevel from "../assets/icons/gray/window-level.svg";
 import Undo from "../assets/icons/gray/undo.svg";
 import Zoom from "../assets/icons/gray/zoom.svg";
+import Dropdown from "../assets/icons/gray/dropdown.svg"
 
 interface ToolbarProps {
   axis: "axial" | "sagittal" | "coronal";
@@ -57,6 +61,7 @@ export default function Toolbar({
             */}
             <div className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors group-hover:bg-gray-6 cursor-default">
               <img src={Zoom} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Zoom" />
+              <img src={Dropdown} className=""></img>
             </div>
             
             {/* 
@@ -115,10 +120,12 @@ export default function Toolbar({
           <button className="p-1 shrink-0"><img src={Undo} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Undo" /></button>
           <button className="p-1 shrink-0"><img src={Redo} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Redo" /></button>
           <img src={Border} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Separator" />
-          <button className="p-1 shrink-0"><img src={Ruler} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Ruler" /></button>
+          <button className="p-1 shrink-0"><img src={WindowLevel} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" /></button>
           <button className="p-1 shrink-0"><img src={Draw} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" /></button>
-          <button className="p-1 shrink-0"><img src={ArrowRight} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Arrow" /></button>
-          <button className="p-1 shrink-0"><img src={Circle} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Circle" /></button>
+          <div className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors group-hover:bg-gray-6 cursor-default">
+              <img src={FlipHorizontal} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Zoom" />
+              <img src={Dropdown} className=""></img>
+            </div>
           <button className="p-1 shrink-0"><img src={Refresh} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Refresh" /></button>
 
         </div>
