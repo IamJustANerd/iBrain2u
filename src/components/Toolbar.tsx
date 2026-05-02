@@ -3,7 +3,6 @@ import ArrowRight from "../assets/icons/gray/arrowRight.svg";
 import Border from "../assets/icons/gray/border.svg";
 import Circle from "../assets/icons/gray/circle.svg";
 import Draw from "../assets/icons/gray/draw.svg";
-import ViewFull from "../assets/icons/gray/viewFull.svg";
 import Grid from "../assets/icons/gray/grid.svg";
 import Layer from "../assets/icons/gray/layer.svg";
 import Mouse from "../assets/icons/blue/mouse.svg";
@@ -18,7 +17,16 @@ import FlipRight from "../assets/icons/gray/flipRight.svg";
 import Report from "../assets/icons/gray/report.svg";
 import WindowLevel from "../assets/icons/gray/windowLevel.svg";
 import Zoom from "../assets/icons/gray/zoom.svg";
-import Dropdown from "../assets/icons/gray/dropdown.svg"
+import Dropdown from "../assets/icons/gray/dropdown.svg";
+
+// NEW: Layout Icons
+import ViewFull from "../assets/icons/gray/viewFull.svg";
+import ViewVertical from "../assets/icons/gray/viewVertical.svg";
+import ViewHorizontal from "../assets/icons/gray/viewHorizontal.svg";
+import View1Plus2 from "../assets/icons/gray/view1+2.svg";
+import View2Plus1 from "../assets/icons/gray/view2+1.svg";
+import View2x2 from "../assets/icons/gray/view2x2.svg";
+import View3x1 from "../assets/icons/gray/view3x1.svg";
 
 interface ToolbarProps {
   axis: "axial" | "sagittal" | "coronal";
@@ -36,9 +44,11 @@ interface ToolbarProps {
   setActiveFlipMode: React.Dispatch<React.SetStateAction<"horizontal" | "vertical">>;
   isInverted: boolean;
   setIsInverted: React.Dispatch<React.SetStateAction<boolean>>;
-  // NEW PROPS
   rotation: number;
-  setRotation: React.Dispatch<React.SetStateAction<number>>;
+setRotation: React.Dispatch<React.SetStateAction<number>>;
+  // NEW PROPS FOR LAYOUT
+  layout: string;
+  setLayout: (layout: string) => void;
 }
 
 export default function Toolbar({ 
@@ -47,12 +57,24 @@ export default function Toolbar({
   zoomLevel, setZoomLevel, setIsMagnifierOpen,
   flipState, setFlipState, activeFlipMode,
   setActiveFlipMode, isInverted, setIsInverted,
-  rotation, setRotation
+  rotation, setRotation, layout, setLayout
 }: ToolbarProps) {
 
   const getButtonClass = (toolName: string) => {
     const baseClass = "p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors";
     return activeTool === toolName ? `${baseClass} bg-gray-4` : `${baseClass} hover:bg-gray-6`;
+  };
+
+  const getLayoutIcon = (l: string) => {
+    switch(l) {
+      case "vertical": return ViewVertical;
+      case "horizontal": return ViewHorizontal;
+      case "1+2": return View1Plus2;
+      case "2+1": return View2Plus1;
+      case "2x2": return View2x2;
+      case "3x1": return View3x1;
+      default: return ViewFull;
+    }
   };
 
   return (
@@ -72,16 +94,49 @@ export default function Toolbar({
           
           <img src={Border} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Separator" />
           
-          <button className={getButtonClass("viewFull")} onClick={() => setActiveTool("viewFull")}>
-            <img src={ViewFull} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="View Full" />
-          </button>
+          {/* LAYOUT DROPDOWN */}
+          <div className="relative group flex items-center h-full">
+            <button className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors hover:bg-gray-6 cursor-pointer">
+              <img src={getLayoutIcon(layout)} className="h-3 w-4.5 sm:h-5 sm:w-6.5 object-contain" alt="Layout" />
+              <img src={Dropdown} className="w-2 h-2 ml-0.5" alt="Dropdown Arrow" />
+            </button>
+            
+            <div className="absolute hidden group-hover:flex top-full left-0 z-50 pt-2">
+              {/* FIX: Added min-w-max and gap-1.5 to prevent squishing */}
+              <div className="bg-gray-7 border border-gray-5 rounded shadow-xl overflow-hidden flex flex-col p-1.5 gap-1.5 min-w-max">
+                
+                {/* FIX: Explicit button dimensions (sm:w-12 sm:h-10), shrink-0, and scaled up img tags */}
+                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === 'full' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('full')}>
+                  <img src={ViewFull} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="Full" />
+                </button>
+                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === 'vertical' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('vertical')}>
+                  <img src={ViewVertical} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="Vertical" />
+                </button>
+                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === 'horizontal' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('horizontal')}>
+                  <img src={ViewHorizontal} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="Horizontal" />
+                </button>
+                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === '1+2' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('1+2')}>
+                  <img src={View1Plus2} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="1+2" />
+                </button>
+                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === '2+1' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('2+1')}>
+                  <img src={View2Plus1} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="2+1" />
+                </button>
+                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === '2x2' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('2x2')}>
+                  <img src={View2x2} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="2x2" />
+                </button>
+                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === '3x1' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('3x1')}>
+                  <img src={View3x1} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="3x1" />
+                </button>
+              </div>
+            </div>
+          </div>
+
           <button className={getButtonClass("grid")} onClick={() => setActiveTool("grid")}>
             <img src={Grid} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Grid" />
           </button>
 
-          {/* ZOOM HOVER DROPDOWN */}
+          {/* ZOOM DROPDOWN */}
           <div className="relative group flex items-center h-full">
-            {/* Make the icon clickable to set the Manual Zoom tool, and dynamically highlight it */}
             <div 
               className={`p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${activeTool === "manualZoom" ? "bg-gray-4" : "hover:bg-gray-6 group-hover:bg-gray-6"}`}
               onClick={() => setActiveTool("manualZoom")}
@@ -93,7 +148,6 @@ export default function Toolbar({
             <div className="absolute hidden group-hover:block top-full left-0 z-50 pt-2">
               <div className="bg-gray-7 border border-gray-5 rounded shadow-xl min-w-[180px] text-sm text-gray-200 overflow-hidden flex flex-col">
                 <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setZoomLevel(1); setIsMagnifierOpen(false); }}>Zoom to Fit</button>
-                {/* NEW: Manual Zoom Button */}
                 <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setActiveTool("manualZoom"); setIsMagnifierOpen(false); }}>Manual Zoom</button>
                 <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setZoomLevel(2); setIsMagnifierOpen(false); }}>2x</button>
                 <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setZoomLevel(3); setIsMagnifierOpen(false); }}>3x</button>
@@ -116,7 +170,7 @@ export default function Toolbar({
             <img src={Invert} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Invert" />
           </button>
 
-          {/* FLIP HOVER DROPDOWN */}
+          {/* FLIP DROPDOWN */}
           <div className="relative group flex items-center h-full">
             <button 
               className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors hover:bg-gray-6 cursor-pointer"
@@ -139,23 +193,19 @@ export default function Toolbar({
                   onClick={() => {
                     const newMode = activeFlipMode === "horizontal" ? "vertical" : "horizontal";
                     setActiveFlipMode(newMode);
-                    if (newMode === "horizontal") {
-                      setFlipState(prev => ({ ...prev, horizontal: !prev.horizontal }));
-                    } else {
-                      setFlipState(prev => ({ ...prev, vertical: !prev.vertical }));
-                    }
+                    if (newMode === "horizontal") setFlipState(prev => ({ ...prev, horizontal: !prev.horizontal }));
+                    else setFlipState(prev => ({ ...prev, vertical: !prev.vertical }));
                   }}
                 >
                   <img src={activeFlipMode === "horizontal" ? FlipVertical : FlipHorizontal} className="h-4 w-4 mr-3" alt="Other Flip" />
                   {activeFlipMode === "horizontal" ? "Flip Vertical" : "Flip Horizontal"}
                 </button>
-                {/* NEW: Rotate Right Button */}
                 <button 
                   className="w-full flex items-center px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors border-t border-gray-5"
-                  onClick={() => setRotation(prev => prev + 90)}
+                  onClick={() => setRotation(prev => (typeof prev === 'number' ? prev + 90 : prev))}
                 >
                   <img src={FlipRight} className="h-4 w-4 mr-3" alt="Flip Right" />
-                  Rotate Right
+                  Rotate Right 90°
                 </button>
               </div>
             </div>
@@ -174,7 +224,7 @@ export default function Toolbar({
         </div>
       </div>
 
-      {/* Sub-toolbar */}
+      {/* Sub-toolbar (Kept Identical) */}
       <div className="flex items-center justify-between px-4 py-4 absolute top-12 left-0 right-0 z-10 pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           <div className="flex flex-row justify-between text-xs text-white bg-gray-3 border-gray-3 border-3 rounded">

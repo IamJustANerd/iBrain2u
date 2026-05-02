@@ -157,6 +157,8 @@ export default function ViewerCanvas({
   const scaleY = zoomLevel * (flipState.vertical ? -1 : 1);
   const filterStyle = `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast}) ${isInverted ? 'invert(1)' : ''}`;
 
+  const verticalPositionClass = flipState.vertical ? "top-4" : "bottom-16";
+
   // ==========================================================================
   // --- DYNAMIC L/R MARKER CALCULATOR ---
   // ==========================================================================
@@ -195,17 +197,17 @@ export default function ViewerCanvas({
   const markers = getMarkerPositions();
 
   const getCornerClass = (pos: {x: string, y: string}) => {
-    if (pos.y === 'top' && pos.x === 'left') return "top-8 left-8";
-    if (pos.y === 'top' && pos.x === 'right') return "top-8 right-8";
-    if (pos.y === 'bottom' && pos.x === 'left') return "bottom-8 left-8";
-    if (pos.y === 'bottom' && pos.x === 'right') return "bottom-8 right-8";
+    if (pos.y === 'top' && pos.x === 'left') return "top-4 left-4";
+    if (pos.y === 'top' && pos.x === 'right') return "top-4 right-4";
+    if (pos.y === 'bottom' && pos.x === 'left') return "bottom-14 left-4";
+    if (pos.y === 'bottom' && pos.x === 'right') return "bottom-14 right-4";
     return "";
   };
 
   return (
     <div
       ref={imageContainerRef}
-      className={`flex-1 flex justify-center sm:p-8 px-8 pb-16 pt-16 overflow-hidden relative min-h-0 ${cursorStyle}`}
+      className={`flex-1 flex items-center justify-center overflow-hidden relative min-h-0 w-full h-full ${cursorStyle}`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUpOrLeave}
@@ -223,7 +225,7 @@ export default function ViewerCanvas({
         <img
           src={activeImageSrc}
           alt={`Brain Scan Slice ${currentFrame}`}
-          className="select-none sm:w-3/4 sm:h-3/4 sm:object-contain pt-8 origin-center"
+          className="select-none max-w-full max-h-full object-contain origin-center"
           draggable="false"
           onDragStart={(e) => e.preventDefault()}
           style={{

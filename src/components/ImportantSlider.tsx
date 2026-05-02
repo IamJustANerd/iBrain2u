@@ -79,7 +79,7 @@ export default function ImportantSlider({
   const currentOffset = thumbWidth / 2 - (currentPositionPercent / 100) * thumbWidth;
 
   return (
-    <div className="absolute bottom-28 md:bottom-20 left-60 right-60 z-20">
+    <div className="relative w-full z-20 pointer-events-auto">
       <div className="relative flex items-center w-full h-6">
         
         {/* Dialog Box (Comment Tooltip) */}
