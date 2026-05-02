@@ -19,7 +19,6 @@ import WindowLevel from "../assets/icons/gray/windowLevel.svg";
 import Zoom from "../assets/icons/gray/zoom.svg";
 import Dropdown from "../assets/icons/gray/dropdown.svg";
 
-// NEW: Layout Icons
 import ViewFull from "../assets/icons/gray/viewFull.svg";
 import ViewVertical from "../assets/icons/gray/viewVertical.svg";
 import ViewHorizontal from "../assets/icons/gray/viewHorizontal.svg";
@@ -27,6 +26,15 @@ import View1Plus2 from "../assets/icons/gray/view1+2.svg";
 import View2Plus1 from "../assets/icons/gray/view2+1.svg";
 import View2x2 from "../assets/icons/gray/view2x2.svg";
 import View3x1 from "../assets/icons/gray/view3x1.svg";
+
+// NEW DRAW TOOL IMPORTS (Assumes standard naming matching your sequence)
+import Distance from "../assets/icons/gray/distance.svg";
+import Angle from "../assets/icons/gray/angle.svg";
+import Elliptical from "../assets/icons/gray/elliptical.svg";
+import Ellipse from "../assets/icons/gray/ellipse.svg";
+import Rectangle from "../assets/icons/gray/rectangle.svg";
+import DrawText from "../assets/icons/gray/drawText.svg";
+import Arrow from "../assets/icons/gray/arrow.svg";
 
 interface ToolbarProps {
   axis: "axial" | "sagittal" | "coronal";
@@ -45,8 +53,7 @@ interface ToolbarProps {
   isInverted: boolean;
   setIsInverted: React.Dispatch<React.SetStateAction<boolean>>;
   rotation: number;
-setRotation: React.Dispatch<React.SetStateAction<number>>;
-  // NEW PROPS FOR LAYOUT
+  setRotation: React.Dispatch<React.SetStateAction<number>>;
   layout: string;
   setLayout: (layout: string) => void;
 }
@@ -77,9 +84,25 @@ export default function Toolbar({
     }
   };
 
+  // Helper to dynamically show the correct icon for the selected draw tool
+  const getActiveDrawIcon = () => {
+    switch(activeTool) {
+      case "distance": return Distance;
+      case "angle": return Angle;
+      case "elliptical": return Elliptical;
+      case "ellipse": return Ellipse;
+      case "rectangle": return Rectangle;
+      case "drawText": return DrawText;
+      case "arrow": return Arrow;
+      case "draw": 
+      default: return Draw;
+    }
+  };
+
   return (
     <>
-      <div className="h-8 sm:h-12 border-b-0 border-gray-6 bg-gray-7 flex items-center justify-between px-4 overflow-visible z-50">
+      {/* OVERFLOW VISIBLE: Essential for Dropdowns */}
+      <div className="h-8 sm:h-12 border-b-0 border-gray-6 bg-gray-7 flex items-center justify-between px-4 overflow-visible">
         <div className="flex items-center gap-4 text-gray-1 shrink-0 h-full">
           
           <button className={getButtonClass("mouse")} onClick={() => setActiveTool("mouse")}>
@@ -100,33 +123,21 @@ export default function Toolbar({
               <img src={getLayoutIcon(layout)} className="h-3 w-4.5 sm:h-5 sm:w-6.5 object-contain" alt="Layout" />
               <img src={Dropdown} className="w-2 h-2 ml-0.5" alt="Dropdown Arrow" />
             </button>
-            
             <div className="absolute hidden group-hover:flex top-full left-0 z-50 pt-2">
-              {/* FIX: Added min-w-max and gap-1.5 to prevent squishing */}
               <div className="bg-gray-7 border border-gray-5 rounded shadow-xl overflow-hidden flex flex-col p-1.5 gap-1.5 min-w-max">
-                
-                {/* FIX: Explicit button dimensions (sm:w-12 sm:h-10), shrink-0, and scaled up img tags */}
-                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === 'full' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('full')}>
-                  <img src={ViewFull} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="Full" />
-                </button>
-                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === 'vertical' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('vertical')}>
-                  <img src={ViewVertical} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="Vertical" />
-                </button>
-                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === 'horizontal' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('horizontal')}>
-                  <img src={ViewHorizontal} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="Horizontal" />
-                </button>
-                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === '1+2' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('1+2')}>
-                  <img src={View1Plus2} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="1+2" />
-                </button>
-                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === '2+1' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('2+1')}>
-                  <img src={View2Plus1} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="2+1" />
-                </button>
-                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === '2x2' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('2x2')}>
-                  <img src={View2x2} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="2x2" />
-                </button>
-                <button className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === '3x1' ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout('3x1')}>
-                  <img src={View3x1} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt="3x1" />
-                </button>
+                {[
+                  { id: "full", icon: ViewFull },
+                  { id: "vertical", icon: ViewVertical },
+                  { id: "horizontal", icon: ViewHorizontal },
+                  { id: "1+2", icon: View1Plus2 },
+                  { id: "2+1", icon: View2Plus1 },
+                  { id: "2x2", icon: View2x2 },
+                  { id: "3x1", icon: View3x1 }
+                ].map((item) => (
+                  <button key={item.id} className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${layout === item.id ? 'bg-gray-5' : 'hover:bg-gray-6'}`} onClick={() => setLayout(item.id)}>
+                    <img src={item.icon} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt={item.id} />
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -137,14 +148,10 @@ export default function Toolbar({
 
           {/* ZOOM DROPDOWN */}
           <div className="relative group flex items-center h-full">
-            <div 
-              className={`p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${activeTool === "manualZoom" ? "bg-gray-4" : "hover:bg-gray-6 group-hover:bg-gray-6"}`}
-              onClick={() => setActiveTool("manualZoom")}
-            >
+            <div className={`p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${activeTool === "manualZoom" ? "bg-gray-4" : "hover:bg-gray-6 group-hover:bg-gray-6"}`} onClick={() => setActiveTool("manualZoom")}>
               <img src={Zoom} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Zoom" />
               <img src={Dropdown} className="w-2 h-2 ml-0.5" alt="Dropdown Arrow"></img>
             </div>
-            
             <div className="absolute hidden group-hover:block top-full left-0 z-50 pt-2">
               <div className="bg-gray-7 border border-gray-5 rounded shadow-xl min-w-[180px] text-sm text-gray-200 overflow-hidden flex flex-col">
                 <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setZoomLevel(1); setIsMagnifierOpen(false); }}>Zoom to Fit</button>
@@ -163,47 +170,31 @@ export default function Toolbar({
             <img src={WindowLevel} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Window Level" />
           </button>
           
-          <button 
-            className={`p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors ${isInverted ? 'bg-gray-4' : 'hover:bg-gray-6'}`}
-            onClick={() => setIsInverted(prev => !prev)}
-          >
+          <button className={`p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors ${isInverted ? 'bg-gray-4' : 'hover:bg-gray-6'}`} onClick={() => setIsInverted(prev => !prev)}>
             <img src={Invert} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Invert" />
           </button>
 
           {/* FLIP DROPDOWN */}
           <div className="relative group flex items-center h-full">
-            <button 
-              className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors hover:bg-gray-6 cursor-pointer"
-              onClick={() => {
-                if (activeFlipMode === "horizontal") {
-                  setFlipState(prev => ({ ...prev, horizontal: !prev.horizontal }));
-                } else {
-                  setFlipState(prev => ({ ...prev, vertical: !prev.vertical }));
-                }
-              }}
-            >
+            <button className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors hover:bg-gray-6 cursor-pointer" onClick={() => {
+                if (activeFlipMode === "horizontal") setFlipState(prev => ({ ...prev, horizontal: !prev.horizontal }));
+                else setFlipState(prev => ({ ...prev, vertical: !prev.vertical }));
+              }}>
               <img src={activeFlipMode === "horizontal" ? FlipHorizontal : FlipVertical} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Flip" />
               <img src={Dropdown} className="w-2 h-2 ml-0.5" alt="Dropdown Arrow" />
             </button>
-            
             <div className="absolute hidden group-hover:block top-full left-0 z-50 pt-2">
               <div className="bg-gray-7 border border-gray-5 rounded shadow-xl min-w-[150px] text-sm text-gray-200 overflow-hidden flex flex-col">
-                <button 
-                  className="w-full flex items-center px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors"
-                  onClick={() => {
+                <button className="w-full flex items-center px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => {
                     const newMode = activeFlipMode === "horizontal" ? "vertical" : "horizontal";
                     setActiveFlipMode(newMode);
                     if (newMode === "horizontal") setFlipState(prev => ({ ...prev, horizontal: !prev.horizontal }));
                     else setFlipState(prev => ({ ...prev, vertical: !prev.vertical }));
-                  }}
-                >
+                  }}>
                   <img src={activeFlipMode === "horizontal" ? FlipVertical : FlipHorizontal} className="h-4 w-4 mr-3" alt="Other Flip" />
                   {activeFlipMode === "horizontal" ? "Flip Vertical" : "Flip Horizontal"}
                 </button>
-                <button 
-                  className="w-full flex items-center px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors border-t border-gray-5"
-                  onClick={() => setRotation(prev => (typeof prev === 'number' ? prev + 90 : prev))}
-                >
+                <button className="w-full flex items-center px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors border-t border-gray-5" onClick={() => setRotation((prev: number) => prev + 90)}>
                   <img src={FlipRight} className="h-4 w-4 mr-3" alt="Flip Right" />
                   Rotate Right 90°
                 </button>
@@ -211,7 +202,37 @@ export default function Toolbar({
             </div>
           </div>
           
-          <button className="p-1 shrink-0"><img src={Draw} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" /></button>
+          {/* NEW DRAW DROPDOWN */}
+          <div className="relative group flex items-center h-full">
+            <button className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors hover:bg-gray-6 cursor-pointer">
+              <img src={getActiveDrawIcon()} className="h-3 w-4.5 sm:h-5 sm:w-6.5 object-contain" alt="Draw Menu" />
+              <img src={Dropdown} className="w-2 h-2 ml-0.5" alt="Dropdown Arrow" />
+            </button>
+            
+            <div className="absolute hidden group-hover:flex top-full left-0 z-50 pt-2">
+              <div className="bg-gray-7 border border-gray-5 rounded shadow-xl overflow-hidden flex flex-col p-1.5 gap-1.5 min-w-max">
+                {[
+                  { id: "distance", icon: Distance },
+                  { id: "angle", icon: Angle },
+                  { id: "elliptical", icon: Elliptical },
+                  { id: "draw", icon: Draw },
+                  { id: "ellipse", icon: Ellipse },
+                  { id: "rectangle", icon: Rectangle },
+                  { id: "drawText", icon: DrawText },
+                  { id: "arrow", icon: Arrow }
+                ].map((item) => (
+                  <button 
+                    key={item.id} 
+                    className={`h-8 w-10 sm:h-10 sm:w-12 shrink-0 rounded flex items-center justify-center transition-colors ${activeTool === item.id ? 'bg-gray-4' : 'hover:bg-gray-6'}`} 
+                    onClick={() => setActiveTool(item.id)}
+                  >
+                    <img src={item.icon} className="h-4 w-5 sm:h-5 sm:w-7 object-contain" alt={item.id} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <button className="p-1 shrink-0"><img src={Report} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Report" /></button>
           <button className="p-1 shrink-0"><img src={Refresh} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Refresh" /></button>
         </div>
@@ -221,22 +242,6 @@ export default function Toolbar({
           <button className={`flex-1 ${axis === "axial" ? "text-blue-400" : "hover:text-white"}`} onClick={() => setAxis("axial")}>AXIAL</button>
           <button className={`flex-1 ${axis === "sagittal" ? "text-blue-400" : "hover:text-white"}`} onClick={() => setAxis("sagittal")}>SAGITTAL</button>
           <button className={`flex-1 ${axis === "coronal" ? "text-blue-400" : "hover:text-white"}`} onClick={() => setAxis("coronal")}>CORONAL</button>
-        </div>
-      </div>
-
-      {/* Sub-toolbar (Kept Identical) */}
-      <div className="flex items-center justify-between px-4 py-4 absolute top-12 left-0 right-0 z-10 pointer-events-none">
-        <div className="flex items-center gap-2 pointer-events-auto">
-          <div className="flex flex-row justify-between text-xs text-white bg-gray-3 border-gray-3 border-3 rounded">
-            <div className="bg-gray-3 border-gray-3 rounded-l items-center my-auto mx-3 hidden sm:block">AI Overlay</div>
-            <div className="flex bg-gray-10 rounded-r overflow-hidden text-xs">
-              <button className="w-1/2 text-white px-2 py-1">ON</button>
-              <button className="w-1/2 text-gray-1 px-2 py-1 hover:bg-gray-7">OFF</button>
-            </div>
-          </div>
-        </div>
-        <div className="text-white text-sm pointer-events-auto font-medium">
-          Slice : {currentFrame} / {maxFrames}
         </div>
       </div>
     </>

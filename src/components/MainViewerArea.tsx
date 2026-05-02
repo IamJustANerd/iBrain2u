@@ -31,7 +31,7 @@ export default function MainViewerArea({
   const [layout, setLayout] = useState<string>("full");
   const [activeViewport, setActiveViewport] = useState<number>(0);
 
-  // --- FIX #1: Use Array.from to create 4 INDEPENDENT object references ---
+  // Added `annotations` array to store shapes for each viewport independently
   const [viewports, setViewports] = useState(() => 
     Array.from({ length: 4 }, () => ({
       zoomLevel: 1,
@@ -39,11 +39,11 @@ export default function MainViewerArea({
       flipState: { horizontal: false, vertical: false },
       isInverted: false,
       rotation: 0,
-      localFrame: currentFrame
+      localFrame: currentFrame,
+      annotations: [] // NEW
     }))
   );
 
-  // --- IMAGE CACHE: Stores previously loaded slices so inactive windows don't lose their images ---
   const [imageCache, setImageCache] = useState<Record<number, string>>({});
   
   useEffect(() => {
@@ -63,25 +63,22 @@ export default function MainViewerArea({
     });
   };
 
-  // --- SMART FRAME SYNCING ---
   const lastInternalUpdate = useRef<number>(-1);
 
   const handleLocalFrameChange = (index: number, val: number | ((prev: number) => number)) => {
     const vp = viewports[index];
     const newValue = typeof val === 'function' ? val(vp.localFrame) : val;
     
-    lastInternalUpdate.current = newValue; // Mark that WE caused this change
+    lastInternalUpdate.current = newValue; 
     updateViewport(index, 'localFrame', newValue);
-    setCurrentFrame(newValue); // Always notify parent so it fetches the new image!
+    setCurrentFrame(newValue); 
   };
 
   useEffect(() => {
-    // Only force active window to jump if the PARENT caused the change (e.g. anomaly list clicked)
     if (currentFrame !== lastInternalUpdate.current) {
       updateViewport(activeViewport, 'localFrame', currentFrame);
     }
   }, [currentFrame, activeViewport]);
-
 
   const activeState = viewports[activeViewport] || viewports[0];
 
@@ -89,7 +86,6 @@ export default function MainViewerArea({
     const vp = viewports[index];
     const isSelected = activeViewport === index;
 
-    // Give priority to user's function, then our cache, then fallback to current parent image
     const imageSrcForThisWindow = getFrameImageSrc 
       ? getFrameImageSrc(vp.localFrame) 
       : (imageCache[vp.localFrame] || (vp.localFrame === currentFrame ? activeImageSrc : ""));
@@ -117,9 +113,10 @@ export default function MainViewerArea({
           flipState={vp.flipState} 
           isInverted={vp.isInverted} 
           rotation={vp.rotation}
+          annotations={vp.annotations} // NEW
+          setAnnotations={(val) => updateViewport(index, 'annotations', val)} // NEW
         />
 
-        {/* --- FIX #3: Border Overlay moved AFTER canvas so it renders completely on top! --- */}
         <div className={`absolute inset-0 pointer-events-none z-50 transition-colors ${isSelected ? 'border-2 border-blue-500' : 'border border-gray-6'}`} />
 
         <div className="absolute bottom-6 left-0 right-0 w-[90%] mx-auto z-20 pointer-events-auto">
@@ -155,17 +152,20 @@ export default function MainViewerArea({
 
   return (
     <main className="flex-1 flex flex-col relative bg-gray-11 min-h-0 min-w-0">
-      <Toolbar 
-        axis={axis} setAxis={setAxis} currentFrame={activeState.localFrame} maxFrames={maxFrames} 
-        activeTool={activeTool} setActiveTool={setActiveTool} 
-        activeFlipMode={activeFlipMode} setActiveFlipMode={setActiveFlipMode}
-        layout={layout} setLayout={setLayout}
-        zoomLevel={activeState.zoomLevel} setZoomLevel={(val) => updateViewport(activeViewport, 'zoomLevel', val)} 
-        flipState={activeState.flipState} setFlipState={(val) => updateViewport(activeViewport, 'flipState', val)} 
-        isInverted={activeState.isInverted} setIsInverted={(val) => updateViewport(activeViewport, 'isInverted', val)} 
-        rotation={activeState.rotation} setRotation={(val) => updateViewport(activeViewport, 'rotation', val)}
-        setIsMagnifierOpen={setIsMagnifierOpen} 
-      />
+      {/* Z-INDEX FIX: Wrapped Toolbar in absolute z-[100] layer */}
+      <div className="relative z-[100]">
+        <Toolbar 
+          axis={axis} setAxis={setAxis} currentFrame={activeState.localFrame} maxFrames={maxFrames} 
+          activeTool={activeTool} setActiveTool={setActiveTool} 
+          activeFlipMode={activeFlipMode} setActiveFlipMode={setActiveFlipMode}
+          layout={layout} setLayout={setLayout}
+          zoomLevel={activeState.zoomLevel} setZoomLevel={(val) => updateViewport(activeViewport, 'zoomLevel', val)} 
+          flipState={activeState.flipState} setFlipState={(val) => updateViewport(activeViewport, 'flipState', val)} 
+          isInverted={activeState.isInverted} setIsInverted={(val) => updateViewport(activeViewport, 'isInverted', val)} 
+          rotation={activeState.rotation} setRotation={(val) => updateViewport(activeViewport, 'rotation', val)}
+          setIsMagnifierOpen={setIsMagnifierOpen} 
+        />
+      </div>
 
       <div className="flex items-center justify-between px-4 py-4 absolute top-12 left-0 right-0 z-10 pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
