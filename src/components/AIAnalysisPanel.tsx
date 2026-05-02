@@ -150,7 +150,7 @@ export default function AiAnalysisPanel({ patient, setCurrentFrame }: AiAnalysis
                 // Define button colors based on the level key
                 let btnColorClass = "bg-blue-1 hover:bg-blue-600 text-white";
                 if (key === "diagnosis") btnColorClass = "bg-red-1 hover:opacity-80 text-white";
-                if (key === "subtype") btnColorClass = "bg-yellow-1 hover:opacity-80 text-gray-9"; // Text dark for yellow bg
+                if (key === "subtype") btnColorClass = "bg-yellow-1 hover:opacity-80 text-white"; // Text dark for yellow bg
                 if (key === "stage") btnColorClass = "bg-purple-1 hover:opacity-80 text-white";
 
                 return (
@@ -322,7 +322,7 @@ export default function AiAnalysisPanel({ patient, setCurrentFrame }: AiAnalysis
                                 onClick={() => setCurrentFrame(slice)}
                                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${btnColorClass}`}
                               >
-                                <img src={EyeIcon} alt="view" className={`w-[14px] h-[14px] ${key === 'subtype' ? 'brightness-0' : ''}`} />
+                                <img src={EyeIcon} alt="view" className="w-[14px] h-[14px]" />
                                 #{slice}
                               </button>
                             ))}

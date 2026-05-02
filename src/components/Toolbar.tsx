@@ -3,19 +3,20 @@ import ArrowRight from "../assets/icons/gray/arrowRight.svg";
 import Border from "../assets/icons/gray/border.svg";
 import Circle from "../assets/icons/gray/circle.svg";
 import Draw from "../assets/icons/gray/draw.svg";
-import Grid1 from "../assets/icons/gray/grid1.svg";
-import Grid4 from "../assets/icons/gray/grid4.svg";
+import ViewFull from "../assets/icons/gray/viewFull.svg";
+import Grid from "../assets/icons/gray/grid.svg";
 import Layer from "../assets/icons/gray/layer.svg";
 import Mouse from "../assets/icons/blue/mouse.svg";
+import ScrollMouse from "../assets/icons/gray/scrollMouse.svg"
 import Move from "../assets/icons/gray/move.svg";
-import Redo from "../assets/icons/gray/redo.svg";
 import Refresh from "../assets/icons/gray/refresh.svg";
 import Ruler from "../assets/icons/gray/ruler.svg";
-import Invert from "../assets/icons/gray/ruler.svg" // Note, still use ruler.svg until the icon is made
-import FlipHorizontal from "../assets/icons/gray/flip_horizontal.svg";
-import FlipVertical from "../assets/icons/gray/flip_vertical.svg";
-import WindowLevel from "../assets/icons/gray/window-level.svg";
-import Undo from "../assets/icons/gray/undo.svg";
+import Invert from "../assets/icons/gray/invert.svg";
+import FlipHorizontal from "../assets/icons/gray/flipHorizontal.svg";
+import FlipVertical from "../assets/icons/gray/flipVertical.svg";
+import FlipRight from "../assets/icons/gray/flipRight.svg";
+import Report from "../assets/icons/gray/report.svg";
+import WindowLevel from "../assets/icons/gray/windowLevel.svg";
 import Zoom from "../assets/icons/gray/zoom.svg";
 import Dropdown from "../assets/icons/gray/dropdown.svg"
 
@@ -27,7 +28,7 @@ interface ToolbarProps {
   activeTool: string;
   setActiveTool: (tool: string) => void;
   zoomLevel: number;
-  setZoomLevel: (zoom: number) => void;
+  setZoomLevel: (zoom: number | ((prev: number) => number)) => void;
   setIsMagnifierOpen: (isOpen: boolean) => void;
   flipState: { horizontal: boolean; vertical: boolean };
   setFlipState: React.Dispatch<React.SetStateAction<{ horizontal: boolean; vertical: boolean }>>;
@@ -35,6 +36,9 @@ interface ToolbarProps {
   setActiveFlipMode: React.Dispatch<React.SetStateAction<"horizontal" | "vertical">>;
   isInverted: boolean;
   setIsInverted: React.Dispatch<React.SetStateAction<boolean>>;
+  // NEW PROPS
+  rotation: number;
+  setRotation: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export default function Toolbar({ 
@@ -42,7 +46,8 @@ export default function Toolbar({
   activeTool, setActiveTool, 
   zoomLevel, setZoomLevel, setIsMagnifierOpen,
   flipState, setFlipState, activeFlipMode,
-  setActiveFlipMode, isInverted, setIsInverted
+  setActiveFlipMode, isInverted, setIsInverted,
+  rotation, setRotation
 }: ToolbarProps) {
 
   const getButtonClass = (toolName: string) => {
@@ -61,78 +66,46 @@ export default function Toolbar({
           <button className={getButtonClass("move")} onClick={() => setActiveTool("move")}>
             <img src={Move} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Move" />
           </button>
+          <button className={getButtonClass("scrollMouse")} onClick={() => setActiveTool("scrollMouse")}>
+            <img src={ScrollMouse} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Scroll" />
+          </button>
           
+          <img src={Border} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Separator" />
+          
+          <button className={getButtonClass("viewFull")} onClick={() => setActiveTool("viewFull")}>
+            <img src={ViewFull} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="View Full" />
+          </button>
+          <button className={getButtonClass("grid")} onClick={() => setActiveTool("grid")}>
+            <img src={Grid} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Grid" />
+          </button>
+
           {/* ZOOM HOVER DROPDOWN */}
           <div className="relative group flex items-center h-full">
-            {/* 
-              The icon acts as a hover target. 
-              Added group-hover:bg-gray-6 so it stays lit up when interacting with the menu! 
-            */}
-            <div className="p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors group-hover:bg-gray-6 cursor-default">
+            {/* Make the icon clickable to set the Manual Zoom tool, and dynamically highlight it */}
+            <div 
+              className={`p-1 rounded h-5 w-5 sm:h-8 sm:w-8 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${activeTool === "manualZoom" ? "bg-gray-4" : "hover:bg-gray-6 group-hover:bg-gray-6"}`}
+              onClick={() => setActiveTool("manualZoom")}
+            >
               <img src={Zoom} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Zoom" />
-              <img src={Dropdown} className=""></img>
+              <img src={Dropdown} className="w-2 h-2 ml-0.5" alt="Dropdown Arrow"></img>
             </div>
             
-            {/* 
-              The Dropdown Menu 
-              Fix: Changed mt-1 to pt-2. This creates an invisible hit-box that connects 
-              the icon directly to the menu so the hover state never breaks.
-            */}
             <div className="absolute hidden group-hover:block top-full left-0 z-50 pt-2">
               <div className="bg-gray-7 border border-gray-5 rounded shadow-xl min-w-[180px] text-sm text-gray-200 overflow-hidden flex flex-col">
-                <button 
-                  className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors"
-                  onClick={() => { setZoomLevel(1); setIsMagnifierOpen(false); }}
-                >
-                  Zoom to Fit
-                </button>
-                <button 
-                  className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors"
-                  onClick={() => { setZoomLevel(2); setIsMagnifierOpen(false); }}
-                >
-                  2x
-                </button>
-                <button 
-                  className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors"
-                  onClick={() => { setZoomLevel(3); setIsMagnifierOpen(false); }}
-                >
-                  3x
-                </button>
-                <button 
-                  className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors"
-                  onClick={() => { setZoomLevel(4); setIsMagnifierOpen(false); }}
-                >
-                  4x
-                </button>
-                <button 
-                  className="w-full text-left px-4 py-2 hover:bg-blue-600 hover:text-white transition-colors border-t border-gray-5 bg-gray-8 text-blue-300 font-medium"
-                  onClick={() => setIsMagnifierOpen(true)}
-                >
-                  Magnifying Glass
-                </button>
+                <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setZoomLevel(1); setIsMagnifierOpen(false); }}>Zoom to Fit</button>
+                {/* NEW: Manual Zoom Button */}
+                <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setActiveTool("manualZoom"); setIsMagnifierOpen(false); }}>Manual Zoom</button>
+                <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setZoomLevel(2); setIsMagnifierOpen(false); }}>2x</button>
+                <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setZoomLevel(3); setIsMagnifierOpen(false); }}>3x</button>
+                <button className="w-full text-left px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors" onClick={() => { setZoomLevel(4); setIsMagnifierOpen(false); }}>4x</button>
+                <button className="w-full text-left px-4 py-2 hover:bg-blue-600 hover:text-white transition-colors border-t border-gray-5 bg-gray-8 text-blue-300 font-medium" onClick={() => setIsMagnifierOpen(true)}>Magnifying Glass</button>
               </div>
             </div>
           </div>
-          
-          <button className={getButtonClass("layer")} onClick={() => setActiveTool("layer")}>
-            <img src={Layer} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Layer" />
-          </button>
-          
+
           <img src={Border} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Separator" />
           
-          <button className={getButtonClass("grid1")} onClick={() => setActiveTool("grid1")}>
-            <img src={Grid1} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Grid1" />
-          </button>
-          <button className={getButtonClass("grid4")} onClick={() => setActiveTool("grid4")}>
-            <img src={Grid4} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Grid4" />
-          </button>
-          <button className="p-1 shrink-0"><img src={Undo} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Undo" /></button>
-          <button className="p-1 shrink-0"><img src={Redo} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Redo" /></button>
-          <img src={Border} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Separator" />
-          <button 
-            className={getButtonClass("windowLevel")} 
-            onClick={() => setActiveTool("windowLevel")}
-          >
+          <button className={getButtonClass("windowLevel")} onClick={() => setActiveTool("windowLevel")}>
             <img src={WindowLevel} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Window Level" />
           </button>
           
@@ -143,7 +116,6 @@ export default function Toolbar({
             <img src={Invert} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Invert" />
           </button>
 
-          <button className="p-1 shrink-0"><img src={Draw} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" /></button>
           {/* FLIP HOVER DROPDOWN */}
           <div className="relative group flex items-center h-full">
             <button 
@@ -165,7 +137,6 @@ export default function Toolbar({
                 <button 
                   className="w-full flex items-center px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors"
                   onClick={() => {
-                    // Set the new mode AND immediately execute the flip
                     const newMode = activeFlipMode === "horizontal" ? "vertical" : "horizontal";
                     setActiveFlipMode(newMode);
                     if (newMode === "horizontal") {
@@ -178,9 +149,20 @@ export default function Toolbar({
                   <img src={activeFlipMode === "horizontal" ? FlipVertical : FlipHorizontal} className="h-4 w-4 mr-3" alt="Other Flip" />
                   {activeFlipMode === "horizontal" ? "Flip Vertical" : "Flip Horizontal"}
                 </button>
+                {/* NEW: Rotate Right Button */}
+                <button 
+                  className="w-full flex items-center px-4 py-2 hover:bg-gray-5 hover:text-white transition-colors border-t border-gray-5"
+                  onClick={() => setRotation(prev => prev + 90)}
+                >
+                  <img src={FlipRight} className="h-4 w-4 mr-3" alt="Flip Right" />
+                  Rotate Right
+                </button>
               </div>
             </div>
           </div>
+          
+          <button className="p-1 shrink-0"><img src={Draw} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Draw" /></button>
+          <button className="p-1 shrink-0"><img src={Report} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Report" /></button>
           <button className="p-1 shrink-0"><img src={Refresh} className="h-3 w-4.5 sm:h-5 sm:w-6.5" alt="Refresh" /></button>
         </div>
 

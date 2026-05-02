@@ -7,12 +7,14 @@ interface ViewerCanvasProps {
   setCurrentFrame: React.Dispatch<React.SetStateAction<number>>;
   activeTool: string;
   zoomLevel: number;
+  setZoomLevel: React.Dispatch<React.SetStateAction<number>>;
   isMagnifierOpen: boolean;
   setIsMagnifierOpen: (isOpen: boolean) => void;
   windowLevel: { brightness: number; contrast: number };
   setWindowLevel: React.Dispatch<React.SetStateAction<{ brightness: number; contrast: number }>>;
   flipState: { horizontal: boolean; vertical: boolean };
   isInverted: boolean;
+  rotation: number;
 }
 
 export default function ViewerCanvas({
@@ -22,12 +24,14 @@ export default function ViewerCanvas({
   setCurrentFrame,
   activeTool,
   zoomLevel,
+  setZoomLevel,
   isMagnifierOpen,
   setIsMagnifierOpen,
   windowLevel,
   setWindowLevel,
   flipState,
-  isInverted
+  isInverted,
+  rotation
 }: ViewerCanvasProps) {
   const scrollAccumulator = useRef(0);
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -108,16 +112,30 @@ export default function ViewerCanvas({
     observer.observe(container);
 
     const handleNativeWheel = (e: WheelEvent) => {
+      // Always prevent default to stop the webpage from scrolling when hovering the canvas
       e.preventDefault();
-      scrollAccumulator.current += e.deltaY;
-      const sensitivityThreshold = 30;
 
-      if (scrollAccumulator.current > sensitivityThreshold) {
-        setCurrentFrame((prev) => Math.min(maxFrames, prev + 1));
-        scrollAccumulator.current = 0;
-      } else if (scrollAccumulator.current < -sensitivityThreshold) {
-        setCurrentFrame((prev) => Math.max(1, prev - 1));
-        scrollAccumulator.current = 0;
+      // 1. Manual Zoom Behavior
+      if (activeTool === "manualZoom") {
+        setZoomLevel(prev => {
+          const zoomDelta = e.deltaY < 0 ? 0.25 : -0.25;
+          return Math.max(1, prev + zoomDelta);
+        });
+        return; 
+      }
+
+      // 2. Slice Scrolling Behavior (NOW GATED BEHIND THE SCROLLMOUSE TOOL)
+      if (activeTool === "scrollMouse") {
+        scrollAccumulator.current += e.deltaY;
+        const sensitivityThreshold = 30;
+
+        if (scrollAccumulator.current > sensitivityThreshold) {
+          setCurrentFrame((prev) => Math.min(maxFrames, prev + 1));
+          scrollAccumulator.current = 0;
+        } else if (scrollAccumulator.current < -sensitivityThreshold) {
+          setCurrentFrame((prev) => Math.max(1, prev - 1));
+          scrollAccumulator.current = 0;
+        }
       }
     };
 
@@ -126,22 +144,63 @@ export default function ViewerCanvas({
       observer.disconnect();
       container.removeEventListener("wheel", handleNativeWheel);
     };
-  }, [maxFrames, setCurrentFrame]);
+  }, [maxFrames, setCurrentFrame, activeTool, setZoomLevel]);
 
   // Determine cursor style based on tool state
-  let cursorStyle = "cursor-ns-resize"; 
+  let cursorStyle = "cursor-default"; // Set default to standard pointer
   if (activeTool === "move") cursorStyle = isDragging ? "cursor-grabbing" : "cursor-grab";
   if (activeTool === "windowLevel") cursorStyle = "cursor-crosshair";
+  if (activeTool === "manualZoom") cursorStyle = "cursor-zoom-in";
+  if (activeTool === "scrollMouse") cursorStyle = "cursor-ns-resize"; // Apply scroll cursor only when active
 
-  // Calculate scaling for both zoom and flip
   const scaleX = zoomLevel * (flipState.horizontal ? -1 : 1);
   const scaleY = zoomLevel * (flipState.vertical ? -1 : 1);
-
-  // Determine vertical placement of L/R markers
-  const verticalPositionClass = flipState.vertical ? "top-8" : "bottom-8";
-
-  // Build the filter string dynamically
   const filterStyle = `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast}) ${isInverted ? 'invert(1)' : ''}`;
+
+  // ==========================================================================
+  // --- DYNAMIC L/R MARKER CALCULATOR ---
+  // ==========================================================================
+  const getMarkerPositions = () => {
+    let l_x = 'left';
+    let l_y = 'bottom';
+    let r_x = 'right';
+    let r_y = 'bottom';
+
+    if (flipState.horizontal) {
+      l_x = 'right';
+      r_x = 'left';
+    }
+    if (flipState.vertical) {
+      l_y = 'top';
+      r_y = 'top';
+    }
+
+    const steps = (((rotation % 360) + 360) % 360) / 90;
+
+    const rotateCorner = (x: string, y: string) => {
+      let currX = x;
+      let currY = y;
+      for (let i = 0; i < steps; i++) {
+        if (currX === 'left' && currY === 'top') { currX = 'right'; currY = 'top'; }
+        else if (currX === 'right' && currY === 'top') { currX = 'right'; currY = 'bottom'; }
+        else if (currX === 'right' && currY === 'bottom') { currX = 'left'; currY = 'bottom'; }
+        else if (currX === 'left' && currY === 'bottom') { currX = 'left'; currY = 'top'; }
+      }
+      return { x: currX, y: currY };
+    };
+
+    return { L: rotateCorner(l_x, l_y), R: rotateCorner(r_x, r_y) };
+  };
+
+  const markers = getMarkerPositions();
+
+  const getCornerClass = (pos: {x: string, y: string}) => {
+    if (pos.y === 'top' && pos.x === 'left') return "top-8 left-8";
+    if (pos.y === 'top' && pos.x === 'right') return "top-8 right-8";
+    if (pos.y === 'bottom' && pos.x === 'left') return "bottom-8 left-8";
+    if (pos.y === 'bottom' && pos.x === 'right') return "bottom-8 right-8";
+    return "";
+  };
 
   return (
     <div
@@ -153,11 +212,11 @@ export default function ViewerCanvas({
       onMouseLeave={handleMouseUpOrLeave}
     >
       {/* Patient Left/Right Markers */}
-      <div className={`absolute ${verticalPositionClass} left-8 text-yellow-1 text-xl font-bold select-none pointer-events-none z-10`}>
-        {flipState.horizontal ? "R" : "L"}
+      <div className={`absolute ${getCornerClass(markers.L)} text-yellow-1 text-xl font-bold select-none pointer-events-none z-10 transition-all duration-300`}>
+        L
       </div>
-      <div className={`absolute ${verticalPositionClass} right-8 text-yellow-1 text-xl font-bold select-none pointer-events-none z-10`}>
-        {flipState.horizontal ? "L" : "R"}
+      <div className={`absolute ${getCornerClass(markers.R)} text-yellow-1 text-xl font-bold select-none pointer-events-none z-10 transition-all duration-300`}>
+        R
       </div>
 
       {activeImageSrc ? (
@@ -168,8 +227,8 @@ export default function ViewerCanvas({
           draggable="false"
           onDragStart={(e) => e.preventDefault()}
           style={{
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scaleX}, ${scaleY})`,
-            filter: filterStyle, // <--- FIXED: Now using the dynamic variable!
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scaleX}, ${scaleY}) rotate(${rotation}deg)`,
+            filter: filterStyle, 
             transition: isDragging ? "none" : "transform 0.15s ease-out",
           }}
         />
@@ -189,6 +248,7 @@ export default function ViewerCanvas({
           windowLevel={windowLevel}
           flipState={flipState}
           isInverted={isInverted}
+          rotation={rotation}
         />
       )}
     </div>
@@ -207,9 +267,10 @@ interface MagnifierProps {
   windowLevel: { brightness: number; contrast: number };
   flipState: { horizontal: boolean; vertical: boolean };
   isInverted: boolean;
+  rotation: number;
 }
 
-function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, containerSize, windowLevel, flipState, isInverted }: MagnifierProps) {
+function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, containerSize, windowLevel, flipState, isInverted, rotation }: MagnifierProps) {
   const [pos, setPos] = useState({ x: 50, y: 50 });
   const [magZoom, setMagZoom] = useState(2.0);
   
@@ -282,7 +343,7 @@ function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, contai
             src={activeImageSrc}
             className="select-none sm:w-3/4 sm:h-3/4 sm:object-contain pt-8 origin-center"
             style={{
-              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scaleX}, ${scaleY})`,
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scaleX}, ${scaleY}) rotate(${rotation}deg)`,
               filter: filterStyle, 
             }}
             draggable="false"

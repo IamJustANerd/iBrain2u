@@ -43,6 +43,8 @@ export default function MainViewerArea({
 
   const [isInverted, setIsInverted] = useState<boolean>(false);
 
+  const [rotation, setRotation] = useState<number>(0);
+
   return (
     <main className="flex-1 flex flex-col relative bg-black min-h-0 min-w-0">
       
@@ -62,6 +64,8 @@ export default function MainViewerArea({
         setActiveFlipMode={setActiveFlipMode}
         isInverted={isInverted}
         setIsInverted={setIsInverted}
+        rotation={rotation}
+        setRotation={setRotation}
       />
 
       <ViewerCanvas 
@@ -69,6 +73,8 @@ export default function MainViewerArea({
         activeTool={activeTool} zoomLevel={zoomLevel} isMagnifierOpen={isMagnifierOpen} setIsMagnifierOpen={setIsMagnifierOpen}
         // Pass the new state down
         windowLevel={windowLevel} setWindowLevel={setWindowLevel} flipState={flipState} isInverted={isInverted}
+        setZoomLevel={setZoomLevel}  
+        rotation={rotation}          
       />
 
       <ImportantSlider 
