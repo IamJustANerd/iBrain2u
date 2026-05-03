@@ -1,11 +1,13 @@
 // src/components/ViewerCanvas.tsx
 import { useEffect, useRef, useState } from "react";
+import MagnifierWindow from "./MagnifierWindow";
+import AnnotationOverlay from "./AnnotationOverlay";
 
-// The shape of our drawing annotations
 export interface Annotation {
   id: number;
-  type: 'distance' | 'angle';
-  points: { x: number, y: number }[]; // Coordinates strictly mapped to the raw Image Data Space
+  type: 'distance' | 'angle' | 'elliptical' | 'ellipse' | 'rectangle' | 'drawText' | 'arrow' | 'draw';
+  points: { x: number, y: number }[]; 
+  text?: string;
 }
 
 interface ViewerCanvasProps {
@@ -23,7 +25,6 @@ interface ViewerCanvasProps {
   flipState: { horizontal: boolean; vertical: boolean };
   isInverted: boolean;
   rotation: number;
-  // NEW PROPS for Drawing
   annotations: Annotation[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setAnnotations: (val: any) => void;
@@ -39,52 +40,40 @@ export default function ViewerCanvas({
   const scrollAccumulator = useRef(0);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
+  // NEW: Ref to force focus on the input when it spawns
+  const textInputRef = useRef<HTMLInputElement>(null);
+
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const initialWindowLevel = useRef({ brightness: 1, contrast: 1 });
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
 
-  // Dedicated state for the annotation currently being drawn (60fps updates)
   const [localAnnotation, setLocalAnnotation] = useState<Annotation | null>(null);
+  const [activeTextInput, setActiveTextInput] = useState<{ id: number, x: number, y: number } | null>(null);
 
-  // Math Setup
   const scaleX = zoomLevel * (flipState.horizontal ? -1 : 1);
   const scaleY = zoomLevel * (flipState.vertical ? -1 : 1);
 
-  // Math Magic: Convert Raw Monitor Mouse Position -> Image Pixel Position
   const getScreenToImage = (sx: number, sy: number) => {
     if (!imageContainerRef.current) return { x: 0, y: 0 };
     const rect = imageContainerRef.current.getBoundingClientRect();
-    
-    // 1. Remove Center Offset & Pan translation
     const dx = sx - (rect.left + rect.width / 2) - panOffset.x;
     const dy = sy - (rect.top + rect.height / 2) - panOffset.y;
-
-    // 2. Reverse Rotation
     const rad = -rotation * Math.PI / 180;
     const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
     const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
-
-    // 3. Reverse Scale & Flip
     return { x: rx / scaleX, y: ry / scaleY };
   }
 
-  // Math Magic: Convert Image Pixel Position -> Raw Monitor Rendering Position
   const getImageToScreen = (ix: number, iy: number) => {
     if (!imageContainerRef.current) return { x: 0, y: 0 };
     const rect = imageContainerRef.current.getBoundingClientRect();
-    
-    // 1. Apply Scale & Flip
     const rx = ix * scaleX;
     const ry = iy * scaleY;
-
-    // 2. Apply Rotation
     const rad = rotation * Math.PI / 180;
     const dx = rx * Math.cos(rad) - ry * Math.sin(rad);
     const dy = rx * Math.sin(rad) + ry * Math.cos(rad);
-
-    // 3. Apply Pan & Center Offset
     return {
       x: dx + panOffset.x + rect.width / 2,
       y: dy + panOffset.y + rect.height / 2
@@ -92,28 +81,31 @@ export default function ViewerCanvas({
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!["move", "windowLevel", "distance", "angle"].includes(activeTool)) return;
+    if (activeTextInput) return; 
+
+    if (!["move", "windowLevel", "distance", "angle", "ellipse", "rectangle", "elliptical", "draw", "arrow", "drawText"].includes(activeTool)) return;
     
-    setIsDragging(true);
+    if (activeTool !== "drawText") setIsDragging(true);
     
     if (activeTool === "move") {
       dragStart.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
     } else if (activeTool === "windowLevel") {
       dragStart.current = { x: e.clientX, y: e.clientY };
       initialWindowLevel.current = { ...windowLevel };
-    } else if (activeTool === "distance") {
+    } else if (["distance", "ellipse", "rectangle", "elliptical", "arrow"].includes(activeTool)) {
       const pt = getScreenToImage(e.clientX, e.clientY);
-      setLocalAnnotation({ id: Date.now(), type: 'distance', points: [pt, pt] });
+      setLocalAnnotation({ id: Date.now(), type: activeTool as any, points: [pt, pt] });
+    } else if (activeTool === "draw") {
+      const pt = getScreenToImage(e.clientX, e.clientY);
+      setLocalAnnotation({ id: Date.now(), type: 'draw', points: [pt] });
+    } else if (activeTool === "drawText") {
+      const pt = getScreenToImage(e.clientX, e.clientY);
+      setActiveTextInput({ id: Date.now(), x: pt.x, y: pt.y });
     } else if (activeTool === "angle") {
       const pt = getScreenToImage(e.clientX, e.clientY);
-      
-      // If we are starting a brand new angle measurement
       if (!localAnnotation || localAnnotation.type !== 'angle' || localAnnotation.points.length === 4) {
         setLocalAnnotation({ id: Date.now(), type: 'angle', points: [pt, pt] });
-      } 
-      // If we already have the first line, start the SECOND independent line
-      else if (localAnnotation.points.length === 2) {
-        // We push TWO identical points to start the second line segment
+      } else if (localAnnotation.points.length === 2) {
         setLocalAnnotation({ ...localAnnotation, points: [...localAnnotation.points, pt, pt] });
       }
     }
@@ -127,20 +119,21 @@ export default function ViewerCanvas({
     } else if (activeTool === "windowLevel") {
       const deltaX = e.clientX - dragStart.current.x;
       const deltaY = e.clientY - dragStart.current.y;
-      const newBrightness = Math.max(0, initialWindowLevel.current.brightness - (deltaY * 0.005));
-      const newContrast = Math.max(0, initialWindowLevel.current.contrast + (deltaX * 0.005));
-      setWindowLevel({ brightness: newBrightness, contrast: newContrast });
-    } else if (activeTool === "distance" && localAnnotation) {
+      setWindowLevel({ 
+        brightness: Math.max(0, initialWindowLevel.current.brightness - (deltaY * 0.005)), 
+        contrast: Math.max(0, initialWindowLevel.current.contrast + (deltaX * 0.005)) 
+      });
+    } else if (["distance", "ellipse", "rectangle", "elliptical", "arrow"].includes(activeTool) && localAnnotation) {
       const pt = getScreenToImage(e.clientX, e.clientY);
       setLocalAnnotation({ ...localAnnotation, points: [localAnnotation.points[0], pt] });
+    } else if (activeTool === "draw" && localAnnotation) {
+      const pt = getScreenToImage(e.clientX, e.clientY);
+      setLocalAnnotation({ ...localAnnotation, points: [...localAnnotation.points, pt] });
     } else if (activeTool === "angle" && localAnnotation) {
       const pt = getScreenToImage(e.clientX, e.clientY);
-      // Dragging the first line
       if (localAnnotation.points.length === 2) {
         setLocalAnnotation({ ...localAnnotation, points: [localAnnotation.points[0], pt] });
-      } 
-      // Dragging the second line
-      else if (localAnnotation.points.length === 4) {
+      } else if (localAnnotation.points.length === 4) {
         setLocalAnnotation({ 
           ...localAnnotation, 
           points: [localAnnotation.points[0], localAnnotation.points[1], localAnnotation.points[2], pt] 
@@ -152,12 +145,17 @@ export default function ViewerCanvas({
   const handleMouseUpOrLeave = () => { 
     if (isDragging) {
       setIsDragging(false);
-      // Commit drawing to permanent array on mouse release
-      if (activeTool === "distance" && localAnnotation) {
+      
+      if (activeTool === "draw" && localAnnotation && localAnnotation.points.length > 2) {
+        const closedPoints = [...localAnnotation.points, localAnnotation.points[0]];
+        setAnnotations((prev: Annotation[]) => [...prev, { ...localAnnotation, points: closedPoints }]);
+        setLocalAnnotation(null);
+      } 
+      else if (["distance", "ellipse", "rectangle", "elliptical", "arrow"].includes(activeTool) && localAnnotation) {
         setAnnotations((prev: Annotation[]) => [...prev, localAnnotation]);
         setLocalAnnotation(null);
-      } else if (activeTool === "angle" && localAnnotation) {
-        // Only commit if BOTH lines have been drawn
+      } 
+      else if (activeTool === "angle" && localAnnotation) {
         if (localAnnotation.points.length === 4) {
           setAnnotations((prev: Annotation[]) => [...prev, localAnnotation]);
           setLocalAnnotation(null);
@@ -166,17 +164,22 @@ export default function ViewerCanvas({
     }
   };
 
-  // If the user switches tools while drawing, clear the temp line
   useEffect(() => {
-    if (activeTool !== 'angle' && activeTool !== 'distance') {
+    if (!["distance", "angle", "ellipse", "rectangle", "elliptical", "draw", "drawText", "arrow"].includes(activeTool)) {
       setLocalAnnotation(null);
+      setActiveTextInput(null);
     }
   }, [activeTool]);
 
-  // Handle zooming, scrolling, and ResizeObserver logic 
+  // NEW: Force focus on the input whenever activeTextInput spawns
+  useEffect(() => {
+    if (activeTextInput && textInputRef.current) {
+      textInputRef.current.focus();
+    }
+  }, [activeTextInput]);
+
   useEffect(() => {
     if (zoomLevel === 1) setPanOffset({ x: 0, y: 0 });
-    
     const container = imageContainerRef.current;
     if (!container) return;
 
@@ -212,105 +215,10 @@ export default function ViewerCanvas({
   if (activeTool === "windowLevel") cursorStyle = "cursor-crosshair";
   if (activeTool === "manualZoom") cursorStyle = "cursor-zoom-in";
   if (activeTool === "scrollMouse") cursorStyle = "cursor-ns-resize";
-  if (["distance", "angle"].includes(activeTool)) cursorStyle = "cursor-crosshair";
+  if (activeTool === "drawText") cursorStyle = "cursor-text";
+  if (["distance", "angle", "ellipse", "rectangle", "elliptical", "draw", "arrow"].includes(activeTool)) cursorStyle = "cursor-crosshair";
 
   const filterStyle = `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast}) ${isInverted ? 'invert(1)' : ''}`;
-
-  const renderAnnotation = (a: Annotation) => {
-    const TextShadow = ({ x, y, text }: { x: number, y: number, text: string }) => (
-      <text x={x} y={y} fill="currentColor" fontSize="16" fontWeight="bold" textAnchor="middle" style={{ filter: "drop-shadow(1px 1px 2px rgba(0,0,0,0.8))" }}>
-        {text}
-      </text>
-    );
-
-    if (a.type === 'distance' && a.points.length >= 2) {
-      const p0 = getImageToScreen(a.points[0].x, a.points[0].y);
-      const p1 = getImageToScreen(a.points[1].x, a.points[1].y);
-      const rawPxDistance = Math.hypot(a.points[1].x - a.points[0].x, a.points[1].y - a.points[0].y);
-      const cmDistance = (rawPxDistance * 0.05).toFixed(2); 
-
-      return (
-        <g key={a.id} className="group pointer-events-auto cursor-pointer text-[#3b82f6] hover:text-[#facc15]">
-          <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="transparent" strokeWidth="15" />
-          <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="currentColor" strokeWidth="2" className="pointer-events-none" />
-          <rect x={p0.x-2} y={p0.y-2} width={4} height={4} fill="currentColor" className="pointer-events-none" />
-          <rect x={p1.x-2} y={p1.y-2} width={4} height={4} fill="currentColor" className="pointer-events-none" />
-          <TextShadow x={(p0.x + p1.x) / 2} y={(p0.y + p1.y) / 2 - 10} text={`${cmDistance} cm`} />
-        </g>
-      );
-    } 
-    
-    if (a.type === 'angle' && a.points.length >= 2) {
-      const p0 = getImageToScreen(a.points[0].x, a.points[0].y);
-      const p1 = getImageToScreen(a.points[1].x, a.points[1].y);
-      
-      let p2, p3, angleInfo = null;
-      
-      if (a.points.length === 4) {
-        p2 = getImageToScreen(a.points[2].x, a.points[2].y);
-        p3 = getImageToScreen(a.points[3].x, a.points[3].y);
-
-        // Vector Math for Angle
-        const v1x = a.points[1].x - a.points[0].x, v1y = a.points[1].y - a.points[0].y;
-        const v2x = a.points[3].x - a.points[2].x, v2y = a.points[3].y - a.points[2].y;
-        const dot = v1x * v2x + v1y * v2y;
-        const mag1 = Math.hypot(v1x, v1y);
-        const mag2 = Math.hypot(v2x, v2y);
-        
-        let angle = Math.acos(dot / (mag1 * mag2)) * (180 / Math.PI);
-        if (angle > 90) angle = 180 - angle;
-
-        // NEW: Calculate the exact mathematical intersection point of the two lines
-        // Standard line intersection formula (Line 1: p0->p1, Line 2: p2->p3)
-        const denominator = (p0.x - p1.x) * (p2.y - p3.y) - (p0.y - p1.y) * (p2.x - p3.x);
-        
-        // If lines are perfectly parallel, denominator is 0
-        if (denominator !== 0) {
-          const t = ((p0.x - p2.x) * (p2.y - p3.y) - (p0.y - p2.y) * (p2.x - p3.x)) / denominator;
-          const intersectX = p0.x + t * (p1.x - p0.x);
-          const intersectY = p0.y + t * (p1.y - p0.y);
-
-          // Find the center of the lines to draw the dashed lines from
-          const mid1X = (p0.x + p1.x) / 2;
-          const mid1Y = (p0.y + p1.y) / 2;
-          const mid2X = (p2.x + p3.x) / 2;
-          const mid2Y = (p2.y + p3.y) / 2;
-
-          angleInfo = (
-            <>
-              {/* Draw dashed lines connecting the midpoints to the intersection */}
-              <line x1={mid1X} y1={mid1Y} x2={intersectX} y2={intersectY} stroke="currentColor" strokeWidth="1.5" strokeDasharray="5,5" className="pointer-events-none" />
-              <line x1={mid2X} y1={mid2Y} x2={intersectX} y2={intersectY} stroke="currentColor" strokeWidth="1.5" strokeDasharray="5,5" className="pointer-events-none" />
-              
-              {/* Position the text slightly offset from the intersection */}
-              <TextShadow x={intersectX - 20} y={intersectY + 5} text={`${angle.toFixed(1)}°`} />
-            </>
-          );
-        } else {
-           // If they are perfectly parallel, just show 0 degrees in the middle
-           angleInfo = <TextShadow x={(p0.x + p2.x) / 2} y={(p0.y + p2.y) / 2} text="0.0°" />;
-        }
-      }
-
-      return (
-        <g key={a.id} className="group pointer-events-auto cursor-pointer text-[#3b82f6] hover:text-[#facc15]">
-          {/* First Line */}
-          <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="transparent" strokeWidth="15" />
-          <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="currentColor" strokeWidth="2" className="pointer-events-none" />
-          
-          {/* Second Line (Only renders when started) */}
-          {p2 && p3 && (
-            <>
-              <line x1={p2.x} y1={p2.y} x2={p3.x} y2={p3.y} stroke="transparent" strokeWidth="15" />
-              <line x1={p2.x} y1={p2.y} x2={p3.x} y2={p3.y} stroke="currentColor" strokeWidth="2" className="pointer-events-none" />
-            </>
-          )}
-          {angleInfo}
-        </g>
-      );
-    }
-    return null;
-  };
 
   const markers = () => {
     let l_x = 'left', l_y = 'bottom', r_x = 'right', r_y = 'bottom';
@@ -340,6 +248,18 @@ export default function ViewerCanvas({
 
   const m = markers();
 
+  const commitText = (text: string) => {
+    if (activeTextInput && text.trim()) {
+      setAnnotations((prev: Annotation[]) => [...prev, {
+        id: activeTextInput.id,
+        type: 'drawText',
+        points: [{ x: activeTextInput.x, y: activeTextInput.y }],
+        text: text
+      }]);
+    }
+    setActiveTextInput(null);
+  };
+
   return (
     <div
       ref={imageContainerRef}
@@ -366,11 +286,39 @@ export default function ViewerCanvas({
         </div>
       )}
 
-      {/* SVG LAYER: Perfectly transparent, holds dynamic annotations */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible">
-        {/* Render committed arrays plus the one currently being drawn */}
-        {[...annotations, localAnnotation].filter(Boolean).map((a) => a && renderAnnotation(a))}
-      </svg>
+      <AnnotationOverlay 
+        annotations={annotations} 
+        localAnnotation={localAnnotation} 
+        getImageToScreen={getImageToScreen} 
+      />
+
+      {/* NEW FLOATING TEXT INPUT OVERLAY */}
+      {activeTextInput && (
+        <div 
+          className="absolute z-50 pointer-events-auto"
+          style={{
+            left: getImageToScreen(activeTextInput.x, activeTextInput.y).x,
+            top: getImageToScreen(activeTextInput.x, activeTextInput.y).y - 20, 
+          }}
+          // Fix: prevent ANY propagation so clicks don't hit the canvas
+          onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }} 
+        >
+          <input
+            ref={textInputRef} // Connect the Ref here to force focus
+            type="text"
+            className="bg-transparent border-2 border-[#3b82f6] text-[#3b82f6] outline-none px-2 py-1 shadow-lg font-bold text-lg min-w-[200px]"
+            placeholder="Type and press Enter..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                commitText(e.currentTarget.value);
+              } else if (e.key === 'Escape') {
+                setActiveTextInput(null); 
+              }
+            }}
+            onBlur={(e) => commitText(e.currentTarget.value)} 
+          />
+        </div>
+      )}
 
       {isMagnifierOpen && (
         <MagnifierWindow 
@@ -379,71 +327,6 @@ export default function ViewerCanvas({
           windowLevel={windowLevel} flipState={flipState} isInverted={isInverted} rotation={rotation}
         />
       )}
-    </div>
-  );
-}
-
-// ... (KEEP MagnifierWindow COMPONENT EXACTLY THE SAME AS PREVIOUS) ...
-interface MagnifierProps {
-  activeImageSrc: string;
-  onClose: () => void;
-  panOffset: { x: number; y: number };
-  zoomLevel: number;
-  containerSize: { w: number; h: number };
-  windowLevel: { brightness: number; contrast: number };
-  flipState: { horizontal: boolean; vertical: boolean };
-  isInverted: boolean;
-  rotation: number;
-}
-
-function MagnifierWindow({ activeImageSrc, onClose, panOffset, zoomLevel, containerSize, windowLevel, flipState, isInverted, rotation }: MagnifierProps) {
-  const [pos, setPos] = useState({ x: 50, y: 50 });
-  const [magZoom, setMagZoom] = useState(2.0);
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      setPos({ x: e.clientX - dragStartRef.current.x, y: e.clientY - dragStartRef.current.y });
-    };
-    const handleGlobalMouseUp = () => { isDraggingRef.current = false; };
-    window.addEventListener("mousemove", handleGlobalMouseMove);
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleGlobalMouseMove);
-      window.removeEventListener("mouseup", handleGlobalMouseUp);
-    };
-  }, []);
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation(); 
-    isDraggingRef.current = true;
-    dragStartRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-  };
-
-  const scaleX = zoomLevel * (flipState.horizontal ? -1 : 1);
-  const scaleY = zoomLevel * (flipState.vertical ? -1 : 1);
-  const filterStyle = `brightness(${windowLevel.brightness}) contrast(${windowLevel.contrast}) ${isInverted ? 'invert(1)' : ''}`;
-
-  return (
-    <div
-      className="absolute z-50 w-64 bg-black border border-gray-3 shadow-2xl flex flex-col cursor-move"
-      style={{ top: `${pos.y}px`, left: `${pos.x}px` }}
-      onMouseDown={handleMouseDown}
-    >
-      <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="absolute top-1 right-1 z-20 bg-white text-black leading-none font-bold text-xs p-1 rounded-sm hover:bg-red-500 hover:text-white" onMouseDown={(e) => e.stopPropagation()}>✕</button>
-      <div className="h-64 relative overflow-hidden bg-black pointer-events-none">
-        <div className="flex justify-center sm:p-8 px-8 pb-16 pt-16 relative" style={{ position: 'absolute', top: -(pos.y + 1), left: -(pos.x + 1), width: containerSize.w || '100%', height: containerSize.h || '100%', transformOrigin: `${pos.x + 128}px ${pos.y + 128}px`, transform: `scale(${magZoom})` }}>
-          <img src={activeImageSrc} className="select-none sm:w-3/4 sm:h-3/4 sm:object-contain pt-8 origin-center" style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${scaleX}, ${scaleY}) rotate(${rotation}deg)`, filter: filterStyle }} draggable="false" alt="Magnified View" />
-        </div>
-      </div>
-      <div className="h-8 bg-black border-t border-gray-4 flex items-center px-2 gap-2 text-white text-xs cursor-default" onMouseDown={(e) => e.stopPropagation()}>
-        <span className="w-10 text-orange-400 font-bold">{magZoom.toFixed(1)}x</span>
-        <button className="bg-white text-black font-bold px-1 rounded-sm active:bg-gray-300" onClick={() => setMagZoom(prev => Math.max(1, prev - 0.5))}>-</button>
-        <input type="range" min={1} max={10} step={0.5} value={magZoom} onChange={(e) => setMagZoom(parseFloat(e.target.value))} className="flex-1 h-1 bg-gray-6 appearance-none rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-white" />
-        <button className="bg-white text-black font-bold px-1 rounded-sm active:bg-gray-300" onClick={() => setMagZoom(prev => Math.min(10, prev + 0.5))}>+</button>
-      </div>
     </div>
   );
 }
